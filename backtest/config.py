@@ -1,34 +1,73 @@
-"""Backtest Configuration - 回测配置"""
+"""Backtest Configuration - 回测配置
 
-from dataclasses import dataclass
+兼容层：从统一配置系统读取配置
+Compatibility layer: reads from unified config system
+"""
+
+from dataclasses import dataclass, field
 from typing import Optional
+from common.config import get_config
 
 
 @dataclass
 class BacktestConfig:
     """回测配置"""
 
+    # ========== 兼容层：从统一配置读取 ==========
+    # Backward compatibility: read from unified config
+
+    def __init__(self, **kwargs):
+        """初始化配置"""
+        # 从统一配置加载默认值
+        unified_config = get_config()
+        bt_config = unified_config.backtest
+
+        # 基础配置
+        self.initial_capital: float = kwargs.get('initial_capital', bt_config.initial_capital)
+        self.commission_rate: float = kwargs.get('commission_rate', bt_config.commission_rate)
+        self.slippage_rate: float = kwargs.get('slippage_rate', bt_config.slippage_rate)
+        self.stamp_duty_rate: float = kwargs.get('stamp_duty_rate', bt_config.stamp_duty_rate)
+
+        # 回测参数
+        self.start_date: str = kwargs.get('start_date', bt_config.start_date)
+        self.end_date: str = kwargs.get('end_date', bt_config.end_date)
+        self.interval: str = kwargs.get('interval', bt_config.interval)
+
+        # 资金管理
+        self.position_size: float = kwargs.get('position_size', bt_config.position_size)
+        self.max_positions: int = kwargs.get('max_positions', bt_config.max_positions)
+        self.use_dynamic_position: bool = kwargs.get('use_dynamic_position', bt_config.use_dynamic_position)
+
+        # 风控参数
+        self.stop_loss_pct: float = kwargs.get('stop_loss_pct', bt_config.stop_loss_pct)
+        self.take_profit_pct: float = kwargs.get('take_profit_pct', bt_config.take_profit_pct)
+        self.enable_trailing_stop: bool = kwargs.get('enable_trailing_stop', bt_config.enable_trailing_stop)
+        self.enable_position_control: bool = kwargs.get('enable_position_control', bt_config.enable_position_control)
+
+        # 验证配置
+        self.__post_init__()
+
     # ========== 基础配置 ==========
-    initial_capital: float = 100000.0  # 初始资金
-    commission_rate: float = 0.00025    # 手续费率 (万分之2.5)
-    slippage_rate: float = 0.001        # 滑点率 (千分之1)
-    stamp_duty_rate: float = 0.001      # 印花税率 (千分之1, 卖出)
+    initial_capital: float  # 初始资金
+    commission_rate: float  # 手续费率 (万分之2.5)
+    slippage_rate: float  # 滑点率 (千分之1)
+    stamp_duty_rate: float  # 印花税率 (千分之1, 卖出)
 
     # ========== 回测参数 ==========
-    start_date: str = "2023-01-01"     # 回测开始日期
-    end_date: str = "2024-12-31"       # 回测结束日期
-    interval: str = "1d"               # K线周期 (1d, 5d, 10d, 1m)
+    start_date: str  # 回测开始日期
+    end_date: str  # 回测结束日期
+    interval: str  # K线周期 (1d, 5d, 10d, 1m)
 
     # ========== 资金管理 ==========
-    position_size: float = 0.1          # 单笔交易仓位 (10%)
-    max_positions: int = 5              # 最大持仓股票数
-    use_dynamic_position: bool = True   # 是否动态调整仓位
+    position_size: float  # 单笔交易仓位 (10%)
+    max_positions: int  # 最大持仓股票数
+    use_dynamic_position: bool  # 是否动态调整仓位
 
     # ========== 风控参数 ==========
-    stop_loss_pct: float = 0.08         # 止损比例 (8%)
-    take_profit_pct: float = 0.20       # 止盈比例 (20%)
-    enable_trailing_stop: bool = False  # 启用移动止损
-    enable_position_control: bool = True  # 启用仓位控制
+    stop_loss_pct: float  # 止损比例 (8%)
+    take_profit_pct: float  # 止盈比例 (20%)
+    enable_trailing_stop: bool  # 启用移动止损
+    enable_position_control: bool  # 启用仓位控制
 
     def __post_init__(self):
         """验证配置"""

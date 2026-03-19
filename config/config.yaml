@@ -1,0 +1,152 @@
+# 应用通用配置
+# Application general configuration
+app_name: "alpha-quant-trader-pro"
+debug: false
+environment: "development"
+timezone: "Asia/Shanghai"
+
+# ========== 数据库配置 ==========
+# Database configuration
+database:
+  url: "postgresql://postgres:postgres@localhost:5432/stock_market"
+  pool_size: 10
+  max_overflow: 20
+  pool_pre_ping: true
+  pool_recycle: 3600
+  connect_timeout: 30
+
+# ========== 数据源配置 ==========
+# Data source configuration
+data_sources:
+  timeout: 10
+  max_retries: 3
+  retry_delay: 0.5
+  log_failures: true
+  sources:
+    akshare:
+      enabled: true
+      base_url: "https://api.akshare.com"
+    sina:
+      enabled: true
+      base_url: "https://finance.sina.com.cn"
+    investoday:
+      enabled: true
+      base_url: "https://www.92inv.com"
+
+# ========== 手续费配置 ==========
+# Fee configuration
+fee:
+  stamp_duty: 0.001           # 印花税 (千分之1)
+  exchange_fee: 0.00002       # 交易所费用 (万分之0.2)
+  broker_commission: 0.0003   # 券商佣金 (万分之3)
+  min_commission: 5.0         # 最低佣金 (5元)
+
+# ========== 日志配置 ==========
+# Logging configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: ""
+  max_file_size: 100          # MB
+  backup_count: 5
+
+# ========== 股票市场配置 ==========
+# Stock market configuration
+stock_market:
+  sync:
+    interval: 300             # 同步间隔 (秒)
+    retry_count: 3
+  data_retention:
+    kline: "2y"               # K线数据保留2年
+    tick: "7d"                # tick数据保留7天
+  trading_hours:
+    morning_start: "09:30"
+    morning_end: "11:30"
+    afternoon_start: "13:00"
+    afternoon_end: "15:00"
+
+# ========== 投资组合配置 ==========
+# Portfolio configuration
+portfolio:
+  trading:
+    default_amount: 10000     # 默认交易金额
+    min_amount: 1000          # 最小交易金额
+  risk:
+    max_drawdown: 0.15        # 最大回撤 (15%)
+    position_limit: 10        # 最大持仓数
+  account:
+    initial_capital: 100000   # 初始资金
+
+# ========== 技术分析配置 ==========
+# Technical analysis configuration
+technical_analysis:
+  calculation:
+    precision: 4              # 计算精度
+    round_result: true
+  indicators:
+    ma_period: 20             # MA周期
+    macd_fast: 12
+    macd_slow: 26
+    macd_signal: 9
+    rsi_period: 14
+    kdj_period: 9
+
+# ========== API服务器配置 ==========
+# API server configuration
+api_server:
+  # 基础配置
+  api_title: "Alpha Quant Trader Pro API"
+  api_version: "2.0.0"
+  api_description: "量化交易系统开放API"
+
+  # 服务器配置
+  host: "0.0.0.0"
+  port: 8000
+
+  # Redis配置
+  redis_url: null
+
+  # 认证配置
+  api_key_secret: "your-secret-key-change-in-production"
+  api_key_header: "X-API-Key"
+  api_signature_header: "X-API-Signature"
+  api_timestamp_header: "X-Timestamp"
+
+  # 限流配置
+  rate_limit_free: 60         # 免费用户 (每分钟)
+  rate_limit_standard: 600    # 标准用户 (每分钟)
+  rate_limit_premium: 3600    # 高级用户 (每分钟)
+
+# ========== 回测配置 ==========
+# Backtest configuration
+backtest:
+  # 基础配置
+  initial_capital: 100000.0
+  commission_rate: 0.00025      # 手续费率 (万分之2.5)
+  slippage_rate: 0.001          # 滑点率 (千分之1)
+  stamp_duty_rate: 0.001        # 印花税率 (千分之1)
+
+  # 回测参数
+  start_date: "2023-01-01"
+  end_date: "2024-12-31"
+  interval: "1d"                # K线周期
+
+  # 资金管理
+  position_size: 0.1            # 单笔交易仓位 (10%)
+  max_positions: 5              # 最大持仓股票数
+  use_dynamic_position: true    # 动态调整仓位
+
+  # 风控参数
+  stop_loss_pct: 0.08           # 止损 (8%)
+  take_profit_pct: 0.20         # 止盈 (20%)
+  enable_trailing_stop: false
+  enable_position_control: true
+
+# ========== 模拟交易配置 ==========
+# Simulation configuration
+simulation:
+  execution_interval: 300       # 执行间隔 (5分钟)
+  check_interval: 60            # 健康检查间隔 (1分钟)
+  market_open_time: "09:30"
+  market_close_time: "15:00"
+  log_file: "logs/simulate_trading.log"
