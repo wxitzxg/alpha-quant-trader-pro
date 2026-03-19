@@ -1,0 +1,64 @@
+# ==================== 数据源配置 ====================
+stock_sources:
+  # 默认请求超时（秒）
+  # 范围: >= 1
+  timeout: 10
+
+  # 最大重试次数
+  # 范围: >= 0
+  max_retries: 3
+
+  # 重试延迟（秒）
+  # 范围: >= 0
+  retry_delay: 0.5
+
+  # 是否记录失败日志
+  log_failures: true
+
+  # 数据源列表
+  sources:
+    # ====== 行情数据源 ======
+    realtime:
+      - name: "sina"           # 源名称
+        priority: 10           # 优先级（数字越小优先级越高）
+        enabled: true          # 是否启用
+        timeout: 3             # 该源的特定超时时间（秒）
+
+      - name: "akshare"
+        priority: 20
+        enabled: true
+        timeout: 5
+
+      - name: "tushare"
+        priority: 30
+        enabled: true
+        timeout: 5
+
+    # ====== K线数据源 ======
+    kline:
+      - name: "tushare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+      - name: "akshare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+      - name: "sina"
+        priority: 30
+        enabled: true
+        timeout: 5
+
+    # ====== 基本面数据源 ======
+    fundamentals:
+      - name: "tushare"
+        priority: 10
+        enabled: true
+        timeout: 15
+
+      - name: "akshare"
+        priority: 20
+        enabled: true
+        timeout: 15
