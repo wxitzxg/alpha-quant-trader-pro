@@ -1,0 +1,19 @@
+{
+  "database": {
+    "url": "postgresql://stock_user:stock_pass@localhost:5432/stock_db",
+    "pool_size": 10,
+    "max_overflow": 20,
+    "echo": false
+  },
+  "sync": {
+    "kline": {
+      "max_workers": 5,
+      "batch_size": 1000,
+      "retry_times": 3,
+      "retry_delay": 1
+    },
+    "stock": {
+      "batch_size": 500
+    }
+  }
+}
