@@ -1,0 +1,26 @@
+
+# ========== API服务器配置 ==========
+# API server configuration
+api_server:
+  # 基础配置
+  api_title: "Alpha Quant Trader Pro API"
+  api_version: "2.0.0"
+  api_description: "量化交易系统开放API"
+
+  # 服务器配置
+  host: "0.0.0.0"
+  port: 8000
+
+  # Redis配置
+  redis_url: null
+
+  # 认证配置
+  api_key_secret: "your-secret-key-change-in-production"
+  api_key_header: "X-API-Key"
+  api_signature_header: "X-API-Signature"
+  api_timestamp_header: "X-Timestamp"
+
+  # 限流配置
+  rate_limit_free: 60         # 免费用户 (每分钟)
+  rate_limit_standard: 600    # 标准用户 (每分钟)
+  rate_limit_premium: 3600    # 高级用户 (每分钟)

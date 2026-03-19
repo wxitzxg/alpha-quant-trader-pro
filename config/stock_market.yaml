@@ -1,0 +1,41 @@
+# ==================== 股票市场配置 ====================
+stock_market:
+  # 数据同步配置
+  sync:
+    # 是否启用增量同步
+    incremental: true
+
+    # 并发同步数量
+    # 同时同步的股票数量
+    # 范围: >= 1
+    concurrency: 5
+
+    # 同步批次大小
+    batch_size: 100
+
+    # 同步间隔（秒）
+    interval: 60
+
+  # 数据保留策略
+  data_retention:
+    # K线数据保留天数
+    # 0表示永久保留
+    # 范围: >= 0
+    kline_days: 365
+
+    # 基本面数据保留天数
+    fundamentals_days: 1825  # 5年
+
+  # 市场交易时间
+  trading_hours:
+    # A股开盘时间（上午）
+    morning_open: "09:30"
+
+    # A股收盘时间（上午）
+    morning_close: "11:30"
+
+    # A股开盘时间（下午）
+    afternoon_open: "13:00"
+
+    # A股收盘时间（下午）
+    afternoon_close: "15:00"

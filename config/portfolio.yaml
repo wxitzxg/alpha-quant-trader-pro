@@ -1,0 +1,28 @@
+# ==================== 投资组合配置 ====================
+portfolio:
+  # 交易配置
+  trading:
+    # 默认交易金额（元）
+    default_amount: 10000
+
+    # 最小交易金额（元）
+    min_amount: 1000
+
+    # 单笔最大持仓比例（0-1）
+    max_position_ratio: 0.3  # 30%
+
+  # 风险控制
+  risk:
+    # 单笔最大亏损比例（0-1）
+    max_loss_ratio: 0.05  # 5%
+
+    # 总资产最大回撤比例（0-1）
+    max_drawdown_ratio: 0.15  # 15%
+
+  # 账户配置
+  account:
+    # 初始资金（元）
+    initial_capital: 1000000
+
+    # 可用资金比例（0-1）
+    available_ratio: 0.9  # 90%

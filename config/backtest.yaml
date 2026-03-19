@@ -1,0 +1,25 @@
+
+# ========== 回测配置 ==========
+# Backtest configuration
+backtest:
+  # 基础配置
+  initial_capital: 100000.0
+  commission_rate: 0.00025      # 手续费率 (万分之2.5)
+  slippage_rate: 0.001          # 滑点率 (千分之1)
+  stamp_duty_rate: 0.001        # 印花税率 (千分之1)
+
+  # 回测参数
+  start_date: "2023-01-01"
+  end_date: "2024-12-31"
+  interval: "1d"                # K线周期
+
+  # 资金管理
+  position_size: 0.1            # 单笔交易仓位 (10%)
+  max_positions: 5              # 最大持仓股票数
+  use_dynamic_position: true    # 动态调整仓位
+
+  # 风控参数
+  stop_loss_pct: 0.08           # 止损 (8%)
+  take_profit_pct: 0.20         # 止盈 (20%)
+  enable_trailing_stop: false
+  enable_position_control: true

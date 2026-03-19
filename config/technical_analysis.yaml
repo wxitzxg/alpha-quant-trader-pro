@@ -1,0 +1,40 @@
+# ==================== 技术分析配置 ====================
+technical_analysis:
+  # 计算配置
+  calculation:
+    # 并发计算数量
+    concurrency: 4
+
+    # 缓存有效期（秒）
+    cache_ttl: 3600  # 1小时
+
+  # 指标参数
+  indicators:
+    # 移动平均线
+    ma:
+      periods: [5, 10, 20, 60]  # 周期列表
+
+    # 相对强弱指标
+    rsi:
+      period: 14  # 计算周期
+
+    # 随机指标
+    kdj:
+      fast_k: 9   # 快速K周期
+      slow_k: 3   # 慢速K周期
+      slow_d: 3   # 慢速D周期
+
+    # 布林带
+    bollinger:
+      period: 20      # 计算周期
+      std_dev: 2.0    # 标准差倍数
+
+    # 量价通道（VCP）
+    vcp:
+      consolidation_periods: 5  # 盘整期数
+      breakout_threshold: 0.05   # 突破阈值（5%）
+
+    # TD序列
+    td_sequential:
+      setup_period: 9      # 建仓周期
+      countdown_period: 13  # 倒计时周期
