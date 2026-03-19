@@ -80,6 +80,66 @@ class TechnicalAnalysisConfig(BaseModel):
     indicators: Dict[str, Any] = Field(default_factory=dict, description="指标参数 / Indicator parameters")
 
 
+class ApiServerConfig(BaseModel):
+    """API服务器配置 / API server configuration"""
+    # 基础配置
+    api_title: str = Field(default="Alpha Quant Trader Pro API", description="API标题 / API title")
+    api_version: str = Field(default="2.0.0", description="API版本 / API version")
+    api_description: str = Field(default="量化交易系统开放API", description="API描述 / API description")
+
+    # 服务器配置
+    host: str = Field(default="0.0.0.0", description="服务器主机 / Server host")
+    port: int = Field(default=8000, ge=1, le=65535, description="服务器端口 / Server port")
+
+    # Redis配置
+    redis_url: Optional[str] = Field(default=None, description="Redis连接URL / Redis connection URL")
+
+    # 认证配置
+    api_key_secret: str = Field(default="your-secret-key-change-in-production", description="API密钥密钥 / API key secret")
+    api_key_header: str = Field(default="X-API-Key", description="API密钥请求头 / API key header")
+    api_signature_header: str = Field(default="X-API-Signature", description="API签名请求头 / API signature header")
+    api_timestamp_header: str = Field(default="X-Timestamp", description="时间戳请求头 / Timestamp header")
+
+    # 限流配置
+    rate_limit_free: int = Field(default=60, ge=0, description="免费用户限流（每分钟）/ Free tier rate limit (per minute)")
+    rate_limit_standard: int = Field(default=600, ge=0, description="标准用户限流（每分钟）/ Standard tier rate limit (per minute)")
+    rate_limit_premium: int = Field(default=3600, ge=0, description="高级用户限流（每分钟）/ Premium tier rate limit (per minute)")
+
+
+class BacktestConfig(BaseModel):
+    """回测配置 / Backtest configuration"""
+    # 基础配置
+    initial_capital: float = Field(default=100000.0, ge=0, description="初始资金 / Initial capital")
+    commission_rate: float = Field(default=0.00025, ge=0, le=0.01, description="手续费率 / Commission rate")
+    slippage_rate: float = Field(default=0.001, ge=0, le=0.01, description="滑点率 / Slippage rate")
+    stamp_duty_rate: float = Field(default=0.001, ge=0, le=0.01, description="印花税率（卖出）/ Stamp duty rate (sell only)")
+
+    # 回测参数
+    start_date: str = Field(default="2023-01-01", description="回测开始日期 / Start date")
+    end_date: str = Field(default="2024-12-31", description="回测结束日期 / End date")
+    interval: str = Field(default="1d", description="K线周期 (1d, 5d, 10d, 1m) / K-line interval")
+
+    # 资金管理
+    position_size: float = Field(default=0.1, ge=0, le=1, description="单笔交易仓位 / Position size per trade")
+    max_positions: int = Field(default=5, ge=1, description="最大持仓股票数 / Max positions")
+    use_dynamic_position: bool = Field(default=True, description="是否动态调整仓位 / Use dynamic position sizing")
+
+    # 风控参数
+    stop_loss_pct: float = Field(default=0.08, ge=0, le=1, description="止损比例 / Stop loss percentage")
+    take_profit_pct: float = Field(default=0.20, ge=0, le=1, description="止盈比例 / Take profit percentage")
+    enable_trailing_stop: bool = Field(default=False, description="启用移动止损 / Enable trailing stop")
+    enable_position_control: bool = Field(default=True, description="启用仓位控制 / Enable position control")
+
+
+class SimulationConfig(BaseModel):
+    """模拟交易配置 / Simulation configuration"""
+    execution_interval: int = Field(default=300, ge=1, description="执行间隔（秒）/ Execution interval (seconds)")
+    check_interval: int = Field(default=60, ge=1, description="健康检查间隔（秒）/ Health check interval (seconds)")
+    market_open_time: str = Field(default="09:30", description="市场开盘时间 / Market open time")
+    market_close_time: str = Field(default="15:00", description="市场收盘时间 / Market close time")
+    log_file: str = Field(default="logs/simulate_trading.log", description="日志文件路径 / Log file path")
+
+
 # ========== 主配置类 ==========
 
 class Config(BaseSettings):
@@ -95,7 +155,8 @@ class Config(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
-        env_nested_delimiter="__"
+        env_nested_delimiter="__",
+        extra="allow"  # 允许额外的环境变量
     )
 
     # ========== 应用配置 ==========
@@ -112,6 +173,9 @@ class Config(BaseSettings):
     stock_market: StockMarketConfig = Field(default_factory=StockMarketConfig, description="股票市场配置 / Stock market config")
     portfolio: PortfolioConfig = Field(default_factory=PortfolioConfig, description="投资组合配置 / Portfolio config")
     technical_analysis: TechnicalAnalysisConfig = Field(default_factory=TechnicalAnalysisConfig, description="技术分析配置 / Technical analysis config")
+    api_server: ApiServerConfig = Field(default_factory=ApiServerConfig, description="API服务器配置 / API server config")
+    backtest: BacktestConfig = Field(default_factory=BacktestConfig, description="回测配置 / Backtest config")
+    simulation: SimulationConfig = Field(default_factory=SimulationConfig, description="模拟交易配置 / Simulation config")
 
     # 内部使用
     _config_file: Optional[str] = None
