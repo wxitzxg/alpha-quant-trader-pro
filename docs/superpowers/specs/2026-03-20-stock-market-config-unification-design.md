@@ -663,28 +663,39 @@ class DatabaseConfig(BaseModel):
 #### StockMarketConfig (已存在，可能需要扩展)
 
 ```python
+class SyncConfig(BaseModel):
+    """同步配置 / Sync configuration"""
+    incremental: bool = Field(default=True, description="是否启用增量同步 / Incremental sync")
+    concurrency: int = Field(default=5, ge=1, description="并发同步数量 / Concurrency")
+    kline_workers: int = Field(default=5, ge=1, description="K线同步工作线程数 / K-line workers")
+    retry_times: int = Field(default=3, ge=0, description="同步重试次数 / Retry attempts")
+    retry_delay: float = Field(default=0.5, ge=0, description="重试延迟（秒）/ Retry delay (seconds)")
+
+class DataRetentionConfig(BaseModel):
+    """数据保留配置 / Data retention configuration"""
+    kline_days: int = Field(default=365, ge=0, description="K线数据保留天数 / K-line days")
+    fundamentals_days: int = Field(default=1825, ge=0, description="基本面数据保留天数 / Fundamentals days")
+
+class TradingHoursConfig(BaseModel):
+    """交易时间配置 / Trading hours configuration"""
+    morning_open: str = Field(default="09:30", description="上午开盘时间 / Morning open")
+    morning_close: str = Field(default="11:30", description="上午收盘时间 / Morning close")
+    afternoon_open: str = Field(default="13:00", description="下午开盘时间 / Afternoon open")
+    afternoon_close: str = Field(default="15:00", description="下午收盘时间 / Afternoon close")
+
+    @field_validator('morning_open', 'morning_close', 'afternoon_open', 'afternoon_close')
+    @classmethod
+    def validate_time_format(cls, v):
+        import re
+        if not re.match(r'^\d{2}:\d{2}$', v):
+            raise ValueError(f"Invalid time format: {v}")
+        return v
+
 class StockMarketConfig(BaseModel):
-    sync: Dict[str, Any] = Field(default_factory=dict)
-    # sync 包含：
-    #   - incremental: bool
-    #   - concurrency: int
-    #   - batch_size: int
-    #   - interval: int
-    #   - kline_workers: int (新增)
-    #   - retry_times: int (新增)
-    #   - retry_delay: float (新增)
-
-    data_retention: Dict[str, Any] = Field(default_factory=dict)
-    # data_retention 包含：
-    #   - kline_days: int
-    #   - fundamentals_days: int
-
-    trading_hours: Dict[str, str] = Field(default_factory=dict)
-    # trading_hours 包含：
-    #   - morning_open: str
-    #   - morning_close: str
-    #   - afternoon_open: str
-    #   - afternoon_close: str
+    """股票市场配置 / Stock market configuration"""
+    sync: SyncConfig = Field(default_factory=SyncConfig, description="数据同步配置 / Data sync config")
+    data_retention: DataRetentionConfig = Field(default_factory=DataRetentionConfig, description="数据保留策略 / Data retention")
+    trading_hours: TradingHoursConfig = Field(default_factory=TradingHoursConfig, description="市场交易时间 / Trading hours")
 ```
 
 ### 配置文件示例
