@@ -24,7 +24,7 @@
 | 5. 编写测试 | 2 | ~25min | tests/stock_market/test_config.py |
 | 6. 文档更新 | 1 | ~10min | docs/ |
 
-**总计**: 8 个任务，预计 ~95 分钟
+**总计**: 9 个任务，预计 ~105 分钟
 
 ---
 
@@ -917,6 +917,109 @@ git commit -m "refactor(stock_market): remove local database.json
 - Remove backup file stock_market/config/__init__.py.bak
 - All config now unified in common/config.py
 - Verified no remaining references to database.json
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
+---
+
+### 任务 5.5: 彻底删除 migrations 文件夹
+
+**Files:**
+- Delete: `stock_market/migrations/` (整个文件夹)
+
+**目标**: 彻底废弃旧的数据库迁移系统，不再保留任何 Alembic 迁移文件
+
+---
+
+- [ ] **Step 1: 检查 migrations 文件夹内容**
+
+```bash
+ls -la stock_market/migrations/
+```
+
+应该看到：
+- `alembic.ini` - Alembic 配置文件
+- `env.py` - 迁移环境配置
+- `script.py.mako` - 迁移脚本模板
+- `versions/` - 迁移版本文件夹
+
+---
+
+- [ ] **Step 2: 检查是否有其他代码引用 migrations**
+
+```bash
+grep -r "migrations" --include="*.py" --include="*.md" . | grep -v "test" | grep -v "docs"
+```
+
+**Expected Output**: 如果没有其他代码使用 migrations，应该只有文档引用
+
+---
+
+- [ ] **Step 3: 确认不再需要 migrations**
+
+检查是否有使用 Alembic 的代码：
+
+```bash
+grep -r "alembic\|Alembic" --include="*.py" . 2>/dev/null | grep -v test | grep -v docs
+```
+
+如果输出为空或只在文档中提到，说明可以安全删除。
+
+---
+
+- [ ] **Step 4: 备份 migrations 文件夹（可选）**
+
+```bash
+cp -r stock_market/migrations stock_market/migrations.backup
+```
+
+---
+
+- [ ] **Step 5: 删除整个 migrations 文件夹**
+
+```bash
+rm -rf stock_market/migrations/
+```
+
+---
+
+- [ ] **Step 6: 从 git 中删除**
+
+```bash
+git rm -r stock_market/migrations/
+```
+
+---
+
+- [ ] **Step 7: 验证删除**
+
+```bash
+ls stock_market/ | grep migrations
+# 应该没有输出
+```
+
+---
+
+- [ ] **Step 8: 检查项目中是否还有 Alembic 依赖**
+
+```bash
+grep -i "alembic" requirements.txt
+```
+
+如果找到，可以考虑是否需要从 requirements.txt 中移除（如果项目完全不使用 Alembic）
+
+---
+
+- [ ] **Step 9: 提交删除**
+
+```bash
+git commit -m "refactor(stock_market): remove migrations folder completely
+
+- Delete entire stock_market/migrations/ folder
+- Remove all Alembic migration files
+- No longer using Alembic for database migrations
+- Clean slate for stock_market module
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ```
