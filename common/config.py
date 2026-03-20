@@ -18,6 +18,48 @@ logger = logging.getLogger(__name__)
 
 # ========== 嵌套配置模型 ==========
 
+class SyncConfig(BaseModel):
+    """数据同步配置 / Data sync configuration"""
+    incremental: bool = Field(default=True, description="是否启用增量同步 / Enable incremental sync")
+    concurrency: int = Field(default=10, ge=1, le=100, description="最大并发数 / Max concurrency")
+    kline_workers: int = Field(default=5, ge=1, le=20, description="K线工作线程数 / K-line worker threads")
+    retry_times: int = Field(default=3, ge=0, le=10, description="重试次数 / Retry attempts")
+    retry_delay: float = Field(default=1.0, ge=0.0, le=60.0, description="重试延迟（秒）/ Retry delay (seconds)")
+
+class DataRetentionConfig(BaseModel):
+    """数据保留策略配置 / Data retention policy configuration"""
+    kline_days: int = Field(default=365, ge=1, le=3650, description="K线数据保留天数 / K-line data retention days")
+    fundamentals_days: int = Field(default=730, ge=1, le=3650, description="基本面数据保留天数 / Fundamentals data retention days")
+
+class TradingHoursConfig(BaseModel):
+    """交易时间配置 / Trading hours configuration"""
+    morning_open: str = Field(default="09:30", description="上午开盘时间 / Morning open time")
+    morning_close: str = Field(default="11:30", description="上午收盘时间 / Morning close time")
+    afternoon_open: str = Field(default="13:00", description="下午开盘时间 / Afternoon open time")
+    afternoon_close: str = Field(default="15:00", description="下午收盘时间 / Afternoon close time")
+
+    @field_validator('morning_open', 'morning_close', 'afternoon_open', 'afternoon_close')
+    @classmethod
+    def validate_time_format(cls, v: str) -> str:
+        """验证时间格式 HH:MM / Validate time format HH:MM"""
+        if not v or len(v) != 5 or v[2] != ':':
+            raise ValueError("Time must be in HH:MM format")
+
+        hour_str, minute_str = v.split(':')
+        if not hour_str.isdigit() or not minute_str.isdigit():
+            raise ValueError("Hour and minute must be digits")
+
+        hour = int(hour_str)
+        minute = int(minute_str)
+
+        if hour < 0 or hour > 23:
+            raise ValueError("Hour must be between 00 and 23")
+        if minute < 0 or minute > 59:
+            raise ValueError("Minute must be between 00 and 59")
+
+        # Format with leading zeros
+        return f"{hour:02d}:{minute:02d}"
+
 class DatabaseConfig(BaseModel):
     """数据库配置 / Database configuration"""
     url: str = Field(
@@ -97,9 +139,9 @@ class LoggingConfig(BaseModel):
 
 class StockMarketConfig(BaseModel):
     """股票市场配置 / Stock market configuration"""
-    sync: Dict[str, Any] = Field(default_factory=dict, description="数据同步配置 / Data sync config")
-    data_retention: Dict[str, Any] = Field(default_factory=dict, description="数据保留策略 / Data retention")
-    trading_hours: Dict[str, str] = Field(default_factory=dict, description="市场交易时间 / Trading hours")
+    sync: SyncConfig = Field(default_factory=SyncConfig, description="数据同步配置 / Data sync config")
+    data_retention: DataRetentionConfig = Field(default_factory=DataRetentionConfig, description="数据保留策略 / Data retention")
+    trading_hours: TradingHoursConfig = Field(default_factory=TradingHoursConfig, description="市场交易时间 / Trading hours")
 
 
 class PortfolioConfig(BaseModel):
