@@ -8,6 +8,7 @@ from datetime import datetime
 from stock_market.database import DatabaseManager
 from stock_market.models import SyncRecord
 from stock_market.managers.kline_manager import KLineDataManager
+from common.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -15,16 +16,20 @@ logger = logging.getLogger(__name__)
 class ConcurrentSyncManager:
     """并发同步管理器"""
 
-    def __init__(self, db_manager: DatabaseManager, max_workers: int = 5):
+    def __init__(self, db_manager: DatabaseManager, max_workers: Optional[int] = None):
         """
         初始化并发同步管理器
 
         Args:
             db_manager: 数据库管理器
-            max_workers: 线程池大小
+            max_workers: 线程池大小（如果为 None，则从配置获取）
         """
         self.db = db_manager
-        self.max_workers = max_workers
+        # 如果未指定，从配置获取默认值
+        if max_workers is None:
+            self.max_workers = get_config().stock_market.sync.concurrency
+        else:
+            self.max_workers = max_workers
 
     def sync_klines_concurrently(
         self,
