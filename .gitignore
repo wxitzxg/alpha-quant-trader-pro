@@ -220,3 +220,9 @@ config/portfolio.json
 
 # Test environment
 tests/.env.test
+
+# 测试相关
+.env.test
+reports/
+logs/test/
+
