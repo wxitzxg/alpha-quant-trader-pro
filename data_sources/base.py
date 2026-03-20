@@ -18,6 +18,30 @@ class DataSourceAdapter(ABC):
     所有具体的数据源适配器都必须继承此类并实现所有抽象方法
     """
 
+    def __init__(self):
+        """初始化适配器"""
+        self._priority = 100  # 默认优先级
+
+    @property
+    def priority(self) -> int:
+        """
+        数据源优先级
+
+        Returns:
+            优先级数值，越小越优先，默认 100 (低优先级)
+        """
+        return self._priority
+
+    @priority.setter
+    def priority(self, value: int):
+        """
+        设置数据源优先级
+
+        Args:
+            value: 优先级数值
+        """
+        self._priority = value
+
     @abstractmethod
     def get_realtime(self, symbol: str) -> Optional[Quote]:
         """

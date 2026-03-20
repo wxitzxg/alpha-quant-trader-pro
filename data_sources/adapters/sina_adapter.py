@@ -27,8 +27,8 @@ class SinaAdapter(DataSourceAdapter):
         Args:
             timeout: 超时时间（秒）
         """
+        super().__init__()  # 调用父类 __init__ 初始化 _priority
         self.timeout = timeout
-        self._priority = 10  # 高优先级
         self.base_url = "http://hq.sinajs.cn/list="
         logger.info("SinaAdapter initialized")
 
