@@ -4,14 +4,13 @@
 统一入口，对外提供数据访问接口
 """
 
-import json
 import logging
 from typing import List, Optional, Dict, Any
-from pathlib import Path
 from .base import DataSourceAdapter
 from .registry import AdapterRegistry
 from .executor import FallbackExecutor
 from .models import Quote, KLine, BalanceSheet, IncomeStatement, CashFlowStatement
+from common.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -27,35 +26,30 @@ class DataSourceAggregator:
     _instance = None
     _initialized = False
 
-    def __new__(cls, config_path: str = "config/sources.json"):
+    def __new__(cls):
         """
         单例模式
 
-        Args:
-            config_path: 配置文件路径
         """
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, config_path: str = "config/sources.json"):
+    def __init__(self):
         """
         初始化聚合器
 
-        Args:
-            config_path: 配置文件路径
         """
         if self._initialized:
             return
 
-        self.config_path = config_path
         self.config: Dict[str, Any] = {}
         self.registry = AdapterRegistry()
         self.executor: Optional[FallbackExecutor] = None
 
         # 加载配置
-        self._load_config()
+        self._load_config_from_config_system()
 
         # 创建执行器
         self.executor = FallbackExecutor(self.config)
@@ -66,49 +60,38 @@ class DataSourceAggregator:
         self._initialized = True
         logger.info("DataSourceAggregator initialized successfully")
 
-    def _load_config(self):
-        """加载配置文件"""
-        config_file = Path(self.config_path)
+    def _load_config_from_config_system(self):
+        """从统一配置系统加载配置"""
+        config = get_config()
 
-        if not config_file.exists():
-            logger.warning(f"Config file not found: {self.config_path}, using default config")
-            self.config = self._get_default_config()
-            return
+        # 从 Config.py 获取数据源配置
+        data_sources_config = config.data_sources
 
-        try:
-            with open(config_file, 'r', encoding='utf-8') as f:
-                self.config = json.load(f)
-            logger.info(f"Loaded config from {self.config_path}")
-        except Exception as e:
-            logger.error(f"Failed to load config: {e}")
-            self.config = self._get_default_config()
-
-    def _get_default_config(self) -> Dict[str, Any]:
-        """获取默认配置"""
-        return {
-            "version": "1.0",
-            "sources": {
-                "realtime": [
-                    {"name": "sina", "priority": 10, "enabled": True, "timeout": 3},
-                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 5},
-                    {"name": "tushare", "priority": 30, "enabled": True, "timeout": 5}
-                ],
-                "kline": [
-                    {"name": "tushare", "priority": 10, "enabled": True, "timeout": 10},
-                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 10},
-                    {"name": "sina", "priority": 30, "enabled": True, "timeout": 5}
-                ],
-                "fundamentals": [
-                    {"name": "tushare", "priority": 10, "enabled": True, "timeout": 15},
-                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 15}
-                ]
-            },
+        # 转换为 aggregator 需要的格式
+        self.config = {
+            "version": "2.0",
+            "sources": {},
             "fallback": {
-                "max_retries": 2,
-                "retry_delay": 0.5,
-                "log_failures": True
+                "max_retries": data_sources_config.max_retries,
+                "retry_delay": data_sources_config.retry_delay,
+                "log_failures": data_sources_config.log_failures
             }
         }
+
+        # 转换所有数据源类别
+        for category_name in [
+            'realtime', 'kline', 'fundamentals', 'tech_indicators',
+            'fund_flows', 'dragon_tiger', 'valuation', 'per_share_indicators',
+            'osc_indicators', 'price_vol_ind', 'limit_up_down', 'turnover_rates',
+            'fund_quotes', 'dupont_analysis'
+        ]:
+            category_items = getattr(data_sources_config.sources, category_name, [])
+            if category_items:
+                self.config['sources'][category_name] = [
+                    item.model_dump() for item in category_items
+                ]
+
+        logger.info("Loaded data sources configuration from unified config system")
 
     def _initialize_adapters(self):
         """初始化所有适配器"""
@@ -133,11 +116,10 @@ class DataSourceAggregator:
                             timeout=source_cfg.get('timeout', 5)
                         )
 
-                        # 设置优先级（如果适配器支持）
-                        if hasattr(adapter, '_priority'):
-                            adapter._priority = source_cfg.get('priority', 100)  # type: ignore
+                        # 使用 property setter 设置优先级（方案 3A）
+                        adapter.priority = source_cfg.get('priority', 100)
 
-                        logger.info(f"Initialized adapter: {source_name}")
+                        logger.info(f"Initialized adapter: {source_name} (priority: {adapter.priority})")
 
                     except Exception as e:
                         logger.error(f"Failed to initialize {source_name}: {e}", exc_info=True)

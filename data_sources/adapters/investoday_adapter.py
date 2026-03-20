@@ -43,9 +43,9 @@ class InvestodayAdapter(DataSourceAdapter):
         Raises:
             DataSourceConfigError: 缺少 API Key 配置
         """
+        super().__init__()
         self.base_url = "https://data-api.investoday.net/data"
         self.timeout = timeout
-        self._priority = 20
 
         # 获取 API Key
         self.api_key = os.environ.get("INVESTODAY_API_KEY")
@@ -68,11 +68,6 @@ class InvestodayAdapter(DataSourceAdapter):
     def name(self) -> str:
         """数据源唯一标识"""
         return "investoday"
-
-    @property
-    def priority(self) -> int:
-        """数据源优先级"""
-        return self._priority
 
     def _call_api(
         self,

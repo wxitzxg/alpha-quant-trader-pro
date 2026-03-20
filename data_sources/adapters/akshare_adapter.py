@@ -38,17 +38,13 @@ class AKShareAdapter(DataSourceAdapter):
         Args:
             timeout: 超时时间（秒）
         """
+        super().__init__()
         self.timeout = timeout
-        self._priority = 20
         logger.info("AKShareAdapter initialized")
 
     @property
     def name(self) -> str:
         return "akshare"
-
-    @property
-    def priority(self) -> int:
-        return self._priority
 
     def get_realtime(self, symbol: str) -> Optional[Quote]:
         """获取实时行情"""

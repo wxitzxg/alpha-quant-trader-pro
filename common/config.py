@@ -8,8 +8,8 @@ Configuration priority: runtime params > env vars > YAML > defaults
 import os
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, Optional, List
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import yaml
 
@@ -31,13 +31,48 @@ class DatabaseConfig(BaseModel):
     connect_timeout: int = Field(default=30, ge=1, description="连接超时时间（秒）/ Connection timeout (seconds)")
 
 
+class DataSourceItem(BaseModel):
+    """数据源配置项 / Data source configuration item"""
+    name: str = Field(..., description="数据源名称 / Data source name")
+    priority: int = Field(100, ge=0, description="优先级，越小越优先 / Priority, smaller is higher")
+    enabled: bool = Field(True, description="是否启用 / Enabled")
+    timeout: int = Field(5, ge=1, description="超时时间（秒）/ Timeout (seconds)")
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        allowed = ['sina', 'akshare', 'tushare', 'investoday']
+        if v not in allowed:
+            raise ValueError(f"name must be one of {allowed}")
+        return v
+
+
+class DataSourcesConfig(BaseModel):
+    """数据源优先级配置 / Data sources priority configuration"""
+    realtime: List[DataSourceItem] = Field(default_factory=list, description="实时行情数据源 / Realtime quote sources")
+    kline: List[DataSourceItem] = Field(default_factory=list, description="K线数据源 / K-line sources")
+    fundamentals: List[DataSourceItem] = Field(default_factory=list, description="基本面数据源 / Fundamentals sources")
+    tech_indicators: List[DataSourceItem] = Field(default_factory=list, description="技术指标数据源 / Technical indicators sources")
+    fund_flows: List[DataSourceItem] = Field(default_factory=list, description="资金流向数据源 / Fund flows sources")
+    dragon_tiger: List[DataSourceItem] = Field(default_factory=list, description="龙虎榜数据源 / Dragon tiger sources")
+    valuation: List[DataSourceItem] = Field(default_factory=list, description="估值指标数据源 / Valuation sources")
+    per_share_indicators: List[DataSourceItem] = Field(default_factory=list, description="每股指标数据源 / Per share indicators sources")
+    osc_indicators: List[DataSourceItem] = Field(default_factory=list, description="超买超卖指标数据源 / Oscillators sources")
+    price_vol_ind: List[DataSourceItem] = Field(default_factory=list, description="量价指标数据源 / Price-volume indicators sources")
+    limit_up_down: List[DataSourceItem] = Field(default_factory=list, description="涨跌停数据源 / Limit up/down sources")
+    turnover_rates: List[DataSourceItem] = Field(default_factory=list, description="换手率数据源 / Turnover rates sources")
+    fund_quotes: List[DataSourceItem] = Field(default_factory=list, description="基金净值数据源 / Fund quotes sources")
+    dupont_analysis: List[DataSourceItem] = Field(default_factory=list, description="杜邦分析数据源 / Dupont analysis sources")
+
+
 class DataSourceConfig(BaseModel):
     """数据源配置 / Data source configuration"""
     timeout: int = Field(default=10, ge=1, description="默认请求超时（秒）/ Default timeout (seconds)")
     max_retries: int = Field(default=3, ge=0, description="最大重试次数 / Max retry attempts")
     retry_delay: float = Field(default=0.5, ge=0, description="重试延迟（秒）/ Retry delay (seconds)")
     log_failures: bool = Field(default=True, description="是否记录失败日志 / Log failures")
-    sources: Dict[str, Any] = Field(default_factory=dict, description="数据源列表 / Data sources list")
+    sources: DataSourcesConfig = Field(default_factory=DataSourcesConfig, description="数据源列表 / Data sources list")
+    fallback: Dict[str, Any] = Field(default_factory=dict, description="降级配置 / Fallback configuration")
 
 
 class FeeConfig(BaseModel):
@@ -202,6 +237,15 @@ class Config(BaseSettings):
         # 加载YAML配置
         yaml_config = self._load_yaml_config()
 
+        # 加载 data_sources.yaml 配置
+        data_sources_config = self._load_data_sources_config()
+        if data_sources_config:
+            # 合并数据源配置到 yaml_config
+            if 'data_sources' in yaml_config:
+                yaml_config['data_sources'].update(data_sources_config)
+            else:
+                yaml_config['data_sources'] = data_sources_config
+
         # 合并配置：YAML配置 + 运行时参数
         merged_config = {**yaml_config, **kwargs}
 
@@ -229,6 +273,88 @@ class Config(BaseSettings):
         except Exception as e:
             logger.error(f"Failed to load config file {self._config_file}: {e}")
             raise
+
+    def _load_data_sources_config(self) -> Dict[str, Any]:
+        """加载数据源专用配置 / Load data sources specific configuration"""
+        config_path = Path("config/data_sources.yaml")
+
+        if not config_path.exists():
+            logger.warning("config/data_sources.yaml not found, using default configuration")
+            # 返回完整的默认配置
+            return self._get_default_data_sources_config()
+
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f) or {}
+                # 提取 data_sources 内容，直接返回
+                return data.get('data_sources', {})
+        except Exception as e:
+            logger.error(f"Failed to load data_sources.yaml: {e}")
+            # 加载失败时返回默认配置
+            return self._get_default_data_sources_config()
+
+    def _get_default_data_sources_config(self) -> Dict[str, Any]:
+        """获取默认的数据源配置 / Get default data sources configuration"""
+        return {
+            "timeout": 10,
+            "max_retries": 3,
+            "retry_delay": 0.5,
+            "log_failures": True,
+            "sources": {
+                "realtime": [
+                    {"name": "sina", "priority": 10, "enabled": True, "timeout": 3},
+                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 5},
+                    {"name": "tushare", "priority": 30, "enabled": True, "timeout": 5}
+                ],
+                "kline": [
+                    {"name": "tushare", "priority": 10, "enabled": True, "timeout": 10},
+                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 10},
+                    {"name": "sina", "priority": 30, "enabled": True, "timeout": 5}
+                ],
+                "fundamentals": [
+                    {"name": "tushare", "priority": 10, "enabled": True, "timeout": 15},
+                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 15}
+                ],
+                "tech_indicators": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
+                ],
+                "fund_flows": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
+                ],
+                "dragon_tiger": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
+                ],
+                "valuation": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
+                ],
+                "per_share_indicators": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
+                ],
+                "osc_indicators": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
+                ],
+                "price_vol_ind": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
+                ],
+                "limit_up_down": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
+                ],
+                "turnover_rates": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
+                ],
+                "fund_quotes": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
+                ],
+                "dupont_analysis": [
+                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 15}
+                ]
+            },
+            "fallback": {
+                "max_retries": 2,
+                "retry_delay": 0.5,
+                "log_failures": True
+            }
+        }
 
     def save_to_file(self, config_file: str):
         """

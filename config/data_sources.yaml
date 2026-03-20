@@ -62,3 +62,125 @@ data_sources:
         priority: 20
         enabled: true
         timeout: 15
+
+    # ====== 技术指标数据源 ======
+    tech_indicators:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+    # ====== 资金流向数据源 ======
+    fund_flows:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+    # ====== 龙虎榜数据源 ======
+    dragon_tiger:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+    # ====== 估值指标数据源 ======
+    valuation:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+    # ====== 每股指标数据源 ======
+    per_share_indicators:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+    # ====== 超买超卖指标数据源 ======
+    osc_indicators:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+    # ====== 量价指标数据源 ======
+    price_vol_ind:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+    # ====== 涨跌停数据源 ======
+    limit_up_down:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+    # ====== 换手率数据源 ======
+    turnover_rates:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+    # ====== 基金净值数据源 ======
+    fund_quotes:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 10
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+    # ====== 杜邦分析数据源 ======
+    dupont_analysis:
+      - name: "investoday"
+        priority: 10
+        enabled: true
+        timeout: 15
