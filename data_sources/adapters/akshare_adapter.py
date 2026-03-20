@@ -33,22 +33,18 @@ class AKShareAdapter(DataSourceAdapter):
     - 基金净值数据
     """
 
-    def __init__(self, timeout: int = 10):
+    def __init__(self, priority: int = 20, timeout: int = 10):
         """
         Args:
-            timeout: 超时时间（秒）
+            priority: 优先级 (默认 20)
+            timeout: 超时时间（秒）(默认 10)
         """
-        self.timeout = timeout
-        self._priority = 20
-        logger.info("AKShareAdapter initialized")
+        super().__init__(priority=priority, timeout=timeout)
+        logger.info(f"AKShareAdapter initialized (priority={priority}, timeout={timeout})")
 
     @property
     def name(self) -> str:
         return "akshare"
-
-    @property
-    def priority(self) -> int:
-        return self._priority
 
     def get_realtime(self, symbol: str) -> Optional[Quote]:
         """获取实时行情"""

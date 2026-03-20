@@ -22,23 +22,19 @@ class SinaAdapter(DataSourceAdapter):
     限制: 无官方文档、历史数据少
     """
 
-    def __init__(self, timeout: int = 5):
+    def __init__(self, priority: int = 10, timeout: int = 3):
         """
         Args:
-            timeout: 超时时间（秒）
+            priority: 优先级 (默认 10)
+            timeout: 超时时间（秒）(默认 3)
         """
-        self.timeout = timeout
-        self._priority = 10  # 高优先级
+        super().__init__(priority=priority, timeout=timeout)
         self.base_url = "http://hq.sinajs.cn/list="
-        logger.info("SinaAdapter initialized")
+        logger.info(f"SinaAdapter initialized (priority={priority}, timeout={timeout})")
 
     @property
     def name(self) -> str:
         return "sina"
-
-    @property
-    def priority(self) -> int:
-        return self._priority
 
     def get_realtime(self, symbol: str) -> Optional[Quote]:
         """获取实时行情"""

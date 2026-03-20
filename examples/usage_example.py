@@ -27,7 +27,7 @@ def example_get_realtime():
     print("\n=== 获取实时行情 ===")
 
     # 单个股票
-    quote = QuoteAPI.get_realtime("600519")  # 贵州茅台
+    quote = QuoteAPI.get("600519")  # 贵州茅台
     if quote:
         print(f"贵州茅台 ({quote.symbol}):")
         print(f"  价格: {quote.price:.2f} 元")
@@ -43,7 +43,7 @@ def example_batch_get_realtime():
     print("\n=== 批量获取实时行情 ===")
 
     symbols = ["600519", "000001", "601318"]  # 贵州茅台、平安银行、中国平安
-    quotes = QuoteAPI.batch_get_realtime(symbols)
+    quotes = QuoteAPI.batch_get(symbols)
 
     print(f"获取到 {len(quotes)} 条行情数据:")
     for quote in quotes:

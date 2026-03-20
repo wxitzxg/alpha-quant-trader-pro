@@ -115,19 +115,19 @@ class FallbackExecutor:
         self.logger.error(f"All sources failed for {operation_name}")
         return None
 
-    def _get_source_timeout(self, source_name: str, operation_name: str) -> int:
+    def _get_source_timeout(self, source_name: str, operation_category: str) -> int:
         """
         获取数据源的超时配置
 
         Args:
             source_name: 数据源名称
-            operation_name: 操作类别
+            operation_category: 操作类别 ("realtime", "kline", "fundamentals")
 
         Returns:
             超时时间（秒），默认 5
         """
         sources_config = self.config.get('sources', {})
-        category_config = sources_config.get(operation_name, [])
+        category_config = sources_config.get(operation_category, [])
 
         for cfg in category_config:
             if cfg.get('name') == source_name:

@@ -15,6 +15,14 @@ data_sources:
   # 是否记录失败日志
   log_failures: true
 
+  # 数据源特定配置
+  source_config:
+    tushare:
+      token: "${TUSHARE_TOKEN}"      # 从环境变量读取
+    investoday:
+      api_key: "${INVESTODAY_API_KEY}"  # 从环境变量读取
+    akshare: {}                        # AKShare 无需配置
+
   # 数据源列表
   sources:
     # ====== 行情数据源 ======

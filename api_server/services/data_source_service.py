@@ -19,15 +19,15 @@ class DataSourceService:
     def get_realtime_quote(stock_code: str) -> Optional[dict]:
         """
         获取实时行情
-        
+
         Args:
             stock_code: 股票代码
-            
+
         Returns:
             行情数据字典
         """
         try:
-            quote = QuoteAPI.get_realtime(stock_code)
+            quote = QuoteAPI.get(stock_code)
             if quote:
                 return {
                     "ts_code": quote.ts_code or f"{stock_code}.SH",
@@ -54,10 +54,10 @@ class DataSourceService:
     def get_batch_quotes(symbols: List[str]) -> dict:
         """
         批量获取行情
-        
+
         Args:
             symbols: 股票代码列表
-            
+
         Returns:
             股票代码 -> 行情数据字典
         """

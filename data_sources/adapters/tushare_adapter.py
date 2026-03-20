@@ -23,25 +23,21 @@ class TushareAdapter(DataSourceAdapter):
     限制: 需要 Token，高频受限
     """
 
-    def __init__(self, token: str, timeout: int = 10):
+    def __init__(self, token: str, priority: int = 30, timeout: int = 10):
         """
         Args:
             token: Tushare API Token
-            timeout: 超时时间（秒）
+            priority: 优先级 (默认 30)
+            timeout: 超时时间（秒）(默认 10)
         """
+        super().__init__(priority=priority, timeout=timeout)
         self.token = token
-        self.timeout = timeout
         self.pro = ts.pro_api(token)
-        self._priority = 30  # 默认优先级，可在配置中覆盖
-        logger.info("TushareAdapter initialized")
+        logger.info(f"TushareAdapter initialized (priority={priority}, timeout={timeout})")
 
     @property
     def name(self) -> str:
         return "tushare"
-
-    @property
-    def priority(self) -> int:
-        return self._priority
 
     def get_realtime(self, symbol: str) -> Optional[Quote]:
         """获取实时行情"""

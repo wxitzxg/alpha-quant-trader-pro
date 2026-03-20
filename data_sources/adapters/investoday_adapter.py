@@ -33,19 +33,20 @@ class InvestodayAdapter(DataSourceAdapter):
     - 支持配置优先级和超时控制
     """
 
-    def __init__(self, timeout: int = 10):
+    def __init__(self, priority: int = 20, timeout: int = 10):
         """
         初始化 Investoday 适配器
 
         Args:
+            priority: 优先级 (默认 20)
             timeout: 超时时间（秒），默认 10 秒
 
         Raises:
             DataSourceConfigError: 缺少 API Key 配置
         """
+        super().__init__(priority=priority, timeout=timeout)
+
         self.base_url = "https://data-api.investoday.net/data"
-        self.timeout = timeout
-        self._priority = 20
 
         # 获取 API Key
         self.api_key = os.environ.get("INVESTODAY_API_KEY")
@@ -62,17 +63,12 @@ class InvestodayAdapter(DataSourceAdapter):
             "Content-Type": "application/json"
         })
 
-        logger.info("InvestodayAdapter initialized")
+        logger.info(f"InvestodayAdapter initialized (priority={priority}, timeout={timeout})")
 
     @property
     def name(self) -> str:
         """数据源唯一标识"""
         return "investoday"
-
-    @property
-    def priority(self) -> int:
-        """数据源优先级"""
-        return self._priority
 
     def _call_api(
         self,

@@ -37,6 +37,7 @@ class DataSourceConfig(BaseModel):
     max_retries: int = Field(default=3, ge=0, description="最大重试次数 / Max retry attempts")
     retry_delay: float = Field(default=0.5, ge=0, description="重试延迟（秒）/ Retry delay (seconds)")
     log_failures: bool = Field(default=True, description="是否记录失败日志 / Log failures")
+    source_config: Dict[str, Any] = Field(default_factory=dict, description="数据源特定配置 / Source-specific config")
     sources: Dict[str, Any] = Field(default_factory=dict, description="数据源列表 / Data sources list")
 
 
@@ -213,22 +214,58 @@ class Config(BaseSettings):
         logger.info(f"Debug mode: {self.debug}")
 
     def _load_yaml_config(self) -> Dict[str, Any]:
-        """加载YAML配置文件 / Load YAML config file"""
-        if not self._config_file:
-            return {}
+        """
+        加载YAML配置文件 / Load YAML config file
 
-        config_path = Path(self._config_file)
+        支持两种模式:
+        1. 单一配置文件: config/config.yaml 或 config/config.{env}.yaml
+        2. 多文件模式: 加载 config/ 目录下所有 *.yaml 文件并合并
+        """
+        merged_config = {}
 
-        if not config_path.exists():
-            logger.warning(f"Config file not found: {self._config_file}")
-            return {}
+        # 首先尝试加载主配置文件 (如果指定)
+        if self._config_file:
+            config_path = Path(self._config_file)
 
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f) or {}
-        except Exception as e:
-            logger.error(f"Failed to load config file {self._config_file}: {e}")
-            raise
+            if config_path.exists():
+                try:
+                    with open(config_path, 'r', encoding='utf-8') as f:
+                        config_content = yaml.safe_load(f) or {}
+                        merged_config.update(config_content)
+                    logger.info(f"Loaded main config file: {self._config_file}")
+                except Exception as e:
+                    logger.error(f"Failed to load config file {self._config_file}: {e}")
+                    raise
+
+        # 然后加载 config/ 目录下所有模块配置文件
+        config_dir = Path("config")
+
+        if config_dir.exists() and config_dir.is_dir():
+            # 获取所有 .yaml 文件
+            yaml_files = list(config_dir.glob("*.yaml"))
+
+            # 过滤掉环境配置文件 (config.*.yaml)
+            module_files = [
+                f for f in yaml_files
+                if not f.name.startswith('config.')
+            ]
+
+            # 按文件名排序以确保加载顺序一致
+            module_files.sort(key=lambda x: x.name)
+
+            for config_file in module_files:
+                try:
+                    with open(config_file, 'r', encoding='utf-8') as f:
+                        config_content = yaml.safe_load(f) or {}
+                        merged_config.update(config_content)
+                    logger.debug(f"Loaded module config: {config_file.name}")
+                except Exception as e:
+                    logger.warning(f"Failed to load {config_file}: {e}")
+
+        if not merged_config:
+            logger.warning("No configuration files loaded")
+
+        return merged_config
 
     def save_to_file(self, config_file: str):
         """

@@ -1,17 +1,11 @@
-"""
-数据源聚合器模块
-
-统一入口，对外提供数据访问接口
-"""
-
-import json
 import logging
+import threading
 from typing import List, Optional, Dict, Any
-from pathlib import Path
 from .base import DataSourceAdapter
 from .registry import AdapterRegistry
 from .executor import FallbackExecutor
 from .models import Quote, KLine, BalanceSheet, IncomeStatement, CashFlowStatement
+from common.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -20,36 +14,31 @@ class DataSourceAggregator:
     """
     数据源聚合器
 
-    单例模式，提供统一的数据访问接口
+    线程安全的单例模式，提供统一的数据访问接口
     自动处理数据源降级和优先级
     """
 
     _instance = None
+    _lock = threading.Lock()
     _initialized = False
 
-    def __new__(cls, config_path: str = "config/sources.json"):
+    def __new__(cls):
         """
-        单例模式
-
-        Args:
-            config_path: 配置文件路径
+        线程安全的单例模式 (双重检查锁定)
         """
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, config_path: str = "config/sources.json"):
+    def __init__(self):
         """
         初始化聚合器
-
-        Args:
-            config_path: 配置文件路径
         """
-        if self._initialized:
+        if hasattr(self, '_initialized') and self._initialized:
             return
 
-        self.config_path = config_path
         self.config: Dict[str, Any] = {}
         self.registry = AdapterRegistry()
         self.executor: Optional[FallbackExecutor] = None
@@ -67,21 +56,45 @@ class DataSourceAggregator:
         logger.info("DataSourceAggregator initialized successfully")
 
     def _load_config(self):
-        """加载配置文件"""
-        config_file = Path(self.config_path)
-
-        if not config_file.exists():
-            logger.warning(f"Config file not found: {self.config_path}, using default config")
-            self.config = self._get_default_config()
-            return
-
+        """从统一配置系统加载配置"""
         try:
-            with open(config_file, 'r', encoding='utf-8') as f:
-                self.config = json.load(f)
-            logger.info(f"Loaded config from {self.config_path}")
+            config = get_config()
+            self.config = config.data_sources.model_dump()
+            logger.info("Loaded config from unified config system")
         except Exception as e:
-            logger.error(f"Failed to load config: {e}")
+            logger.error(f"Failed to load config from unified config system: {e}")
             self.config = self._get_default_config()
+
+    def _get_default_config(self) -> Dict[str, Any]:
+        """获取默认配置"""
+        return {
+            "version": "1.0",
+            "timeout": 10,
+            "max_retries": 3,
+            "retry_delay": 0.5,
+            "log_failures": True,
+            "sources": {
+                "realtime": [
+                    {"name": "sina", "priority": 10, "enabled": True, "timeout": 3},
+                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 5},
+                    {"name": "tushare", "priority": 30, "enabled": True, "timeout": 5}
+                ],
+                "kline": [
+                    {"name": "tushare", "priority": 10, "enabled": True, "timeout": 10},
+                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 10},
+                    {"name": "sina", "priority": 30, "enabled": True, "timeout": 5}
+                ],
+                "fundamentals": [
+                    {"name": "tushare", "priority": 10, "enabled": True, "timeout": 15},
+                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 15}
+                ]
+            },
+            "fallback": {
+                "max_retries": 2,
+                "retry_delay": 0.5,
+                "log_failures": True
+            }
+        }
 
     def _get_default_config(self) -> Dict[str, Any]:
         """获取默认配置"""
@@ -127,17 +140,18 @@ class DataSourceAggregator:
                         continue
 
                     try:
-                        # 创建适配器实例
+                        # 获取数据源特定配置
+                        source_specific_config = self.config.get('source_config', {}).get(source_name, {})
+
+                        # 创建适配器实例 - 传递配置参数
                         adapter = self.registry.create_adapter(
                             source_name,
-                            timeout=source_cfg.get('timeout', 5)
+                            priority=source_cfg.get('priority', 100),
+                            timeout=source_cfg.get('timeout', 5),
+                            **source_specific_config
                         )
 
-                        # 设置优先级（如果适配器支持）
-                        if hasattr(adapter, '_priority'):
-                            adapter._priority = source_cfg.get('priority', 100)  # type: ignore
-
-                        logger.info(f"Initialized adapter: {source_name}")
+                        logger.info(f"Initialized adapter: {source_name} (priority={adapter.priority}, timeout={adapter.timeout})")
 
                     except Exception as e:
                         logger.error(f"Failed to initialize {source_name}: {e}", exc_info=True)
@@ -169,7 +183,7 @@ class DataSourceAggregator:
 
     # ========== 对外统一接口 ==========
 
-    def get_realtime(self, symbol: str) -> Optional[Quote]:
+    def realtime(self, symbol: str) -> Optional[Quote]:
         """
         获取单个股票实时行情
 
@@ -187,10 +201,10 @@ class DataSourceAggregator:
         return self.executor.execute_with_fallback(
             adapters,
             lambda adapter: adapter.get_realtime(symbol),
-            "get_realtime"
+            "realtime"
         )
 
-    def batch_get_realtime(self, symbols: List[str]) -> List[Quote]:
+    def batch_realtime(self, symbols: List[str]) -> List[Quote]:
         """
         批量获取实时行情
 
@@ -208,12 +222,12 @@ class DataSourceAggregator:
         result = self.executor.execute_with_fallback(
             adapters,
             lambda adapter: adapter.batch_get_realtime(symbols),
-            "batch_get_realtime"
+            "batch_realtime"
         )
 
         return result if result is not None else []
 
-    def get_kline(
+    def kline(
         self,
         symbol: str,
         interval: str = "1d",
@@ -240,12 +254,12 @@ class DataSourceAggregator:
         result = self.executor.execute_with_fallback(
             adapters,
             lambda adapter: adapter.get_kline(symbol, interval, start_date, end_date),
-            "get_kline"
+            "kline"
         )
 
         return result if result is not None else []
 
-    def get_balance_sheet(
+    def fundamentals_balance_sheet(
         self,
         symbol: str,
         year: int,
@@ -270,10 +284,10 @@ class DataSourceAggregator:
         return self.executor.execute_with_fallback(
             adapters,
             lambda adapter: adapter.get_balance_sheet(symbol, year, quarter),
-            "get_balance_sheet"
+            "fundamentals_balance_sheet"
         )
 
-    def get_income_statement(
+    def fundamentals_income_statement(
         self,
         symbol: str,
         year: int,
@@ -298,10 +312,10 @@ class DataSourceAggregator:
         return self.executor.execute_with_fallback(
             adapters,
             lambda adapter: adapter.get_income_statement(symbol, year, quarter),
-            "get_income_statement"
+            "fundamentals_income_statement"
         )
 
-    def get_cash_flow_statement(
+    def fundamentals_cash_flow_statement(
         self,
         symbol: str,
         year: int,
@@ -326,10 +340,10 @@ class DataSourceAggregator:
         return self.executor.execute_with_fallback(
             adapters,
             lambda adapter: adapter.get_cash_flow_statement(symbol, year, quarter),
-            "get_cash_flow_statement"
+            "fundamentals_cash_flow_statement"
         )
 
-    def get_financial_indicators(
+    def fundamentals_indicators(
         self,
         symbol: str,
         year: int,
@@ -354,7 +368,7 @@ class DataSourceAggregator:
         result = self.executor.execute_with_fallback(
             adapters,
             lambda adapter: adapter.get_financial_indicators(symbol, year, quarter),
-            "get_financial_indicators"
+            "fundamentals_indicators"
         )
 
         return result if result is not None else {}
@@ -366,14 +380,14 @@ class QuoteAPI:
     """实时行情 API"""
 
     @staticmethod
-    def get_realtime(symbol: str) -> Optional[Quote]:
+    def get(symbol: str) -> Optional[Quote]:
         aggregator = DataSourceAggregator()
-        return aggregator.get_realtime(symbol)
+        return aggregator.realtime(symbol)
 
     @staticmethod
-    def batch_get_realtime(symbols: List[str]) -> List[Quote]:
+    def batch_get(symbols: List[str]) -> List[Quote]:
         aggregator = DataSourceAggregator()
-        return aggregator.batch_get_realtime(symbols)
+        return aggregator.batch_realtime(symbols)
 
 
 class KLineAPI:
@@ -383,7 +397,7 @@ class KLineAPI:
     def get(symbol: str, interval: str = "1d",
             start_date: str = "", end_date: str = "") -> List[KLine]:
         aggregator = DataSourceAggregator()
-        return aggregator.get_kline(symbol, interval, start_date, end_date)
+        return aggregator.kline(symbol, interval, start_date, end_date)
 
 
 class FundamentalsAPI:
@@ -392,19 +406,19 @@ class FundamentalsAPI:
     @staticmethod
     def get_balance_sheet(symbol: str, year: int, quarter: int) -> Optional[BalanceSheet]:
         aggregator = DataSourceAggregator()
-        return aggregator.get_balance_sheet(symbol, year, quarter)
+        return aggregator.fundamentals_balance_sheet(symbol, year, quarter)
 
     @staticmethod
     def get_income_statement(symbol: str, year: int, quarter: int) -> Optional[IncomeStatement]:
         aggregator = DataSourceAggregator()
-        return aggregator.get_income_statement(symbol, year, quarter)
+        return aggregator.fundamentals_income_statement(symbol, year, quarter)
 
     @staticmethod
     def get_cash_flow_statement(symbol: str, year: int, quarter: int) -> Optional[CashFlowStatement]:
         aggregator = DataSourceAggregator()
-        return aggregator.get_cash_flow_statement(symbol, year, quarter)
+        return aggregator.fundamentals_cash_flow_statement(symbol, year, quarter)
 
     @staticmethod
     def get_indicators(symbol: str, year: int, quarter: int) -> Dict[str, float]:
         aggregator = DataSourceAggregator()
-        return aggregator.get_financial_indicators(symbol, year, quarter)
+        return aggregator.fundamentals_indicators(symbol, year, quarter)
