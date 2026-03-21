@@ -5,7 +5,7 @@
 
 from typing import List, Optional
 from datetime import datetime
-from portfolio_manager.config import PortfolioConfig
+from common.config import get_config
 from portfolio_manager.models import PositionModel, TransactionModel, AccountSummary
 from portfolio_manager.fee_calculator import FeeCalculator
 from portfolio_manager.position_service import PositionService
@@ -25,9 +25,27 @@ class PortfolioCommands:
     """
     用户股票管理模块 - 统一命令入口（重构版）
 
+    ## 配置流程
+
+    ```
+    PortfolioCommands.__init__()
+        ↓
+        get_config() → Config 实例
+            ↓
+            配置来源 (优先级从高到低):
+            - 运行时参数 (kwargs)
+            - 环境变量 (Pydantic BaseSettings)
+            - YAML 配置文件 (config/config.yaml)
+            - 默认值 (Config 模型定义)
+            ↓
+        Config 方法:
+        - get_database_url() → 数据库连接 URL
+        - get_fee_config() → FeeConfig 对象 (手续费配置)
+    ```
+
     使用示例：
     >>> from portfolio_manager import PortfolioCommands
-    >>> portfolio = PortfolioCommands(config_path="config/portfolio.json")
+    >>> portfolio = PortfolioCommands()
 
     # 增加初始资金
     >>> portfolio.add_cash(100000)
@@ -48,15 +66,14 @@ class PortfolioCommands:
     ...     print(f"{p.symbol}: {p.quantity} 股, 盈亏: {p.floating_pl:.2f}")
     """
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self):
         """
         初始化投资组合命令
 
-        Args:
-            config_path: 配置文件路径（可选）
+        配置来源：统一配置系统 (common/config.py)
         """
-        # 加载配置
-        self.config = PortfolioConfig(config_path)
+        # 加载配置（使用统一配置）
+        self.config = get_config()
 
         # 初始化数据库连接
         self.db_manager = self._init_database()
@@ -76,7 +93,7 @@ class PortfolioCommands:
             self.transaction_repo = TransactionRepository(session)
             self.cash_repo = CashBalanceRepository(session)
 
-        # 初始化服务
+        # 初始化服务（直接从统一配置获取手续费配置）
         self.fee_calculator = FeeCalculator(self.config.get_fee_config())
         self.position_service = PositionService(self.position_repo, self.data_source)
         self.account_service = AccountService(self.cash_repo, self.position_service)
