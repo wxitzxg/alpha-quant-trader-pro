@@ -10,6 +10,7 @@ from datetime import datetime
 
 from data_sources.adapters.investoday_adapter import InvestodayAdapter
 from data_sources.exceptions import DataSourceError
+from common.config import get_config
 
 
 class FundFlowService:
@@ -17,7 +18,17 @@ class FundFlowService:
 
     def __init__(self):
         """初始化资金流向服务"""
-        self.data_source = InvestodayAdapter(timeout=10)
+        config = get_config()
+        # 获取 Investoday 数据源的超时配置
+        fund_flows_config = None
+        for source in config.data_sources.sources.fund_flows:
+            if source.name == "investoday":
+                fund_flows_config = source
+                break
+
+        timeout = fund_flows_config.timeout if fund_flows_config else config.data_sources.timeout
+
+        self.data_source = InvestodayAdapter(timeout=timeout)
 
     def get_fund_flows(
         self,
