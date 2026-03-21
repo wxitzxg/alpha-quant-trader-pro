@@ -5,6 +5,7 @@ AKShare 数据源适配器 - 完整扩展版
 import akshare as ak
 import logging
 import numpy as np
+import pandas as pd
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 from ..base import DataSourceAdapter
@@ -835,6 +836,3 @@ class AKShareAdapter(DataSourceAdapter):
             "AKShare does not support dupont analysis. "
             "Use Investoday data source instead."
         )
-
-
-import pandas as pd
