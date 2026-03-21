@@ -602,12 +602,53 @@ class InvestodayAdapter(DataSourceAdapter):
 
         Returns:
             指标字典 {"roe": 0.15, "gross_margin": 0.4, ...}
-
-        Raises:
-            DataSourceError: 数据源异常
         """
-        # TODO: Implement financial indicators
-        return {}
+        try:
+            report_date = self._get_report_date(year, quarter)
+
+            data = self._call_api(
+                endpoint="stock/financial-indicators",
+                method="GET",
+                params={
+                    "stockCode": symbol,
+                    "beginDate": report_date,
+                    "endDate": report_date
+                }
+            )
+
+            items = data.get("items", [])
+            if not items:
+                return {}
+
+            # 提取常见财务指标
+            item = items[0]
+            indicators = {}
+
+            # ROE (净资产收益率)
+            if item.get("roe") is not None:
+                indicators["roe"] = float(item["roe"])
+
+            # 毛利率
+            if item.get("grossMargin") is not None:
+                indicators["gross_margin"] = float(item["grossMargin"])
+
+            # 净利率
+            if item.get("netProfitMargin") is not None:
+                indicators["net_profit_margin"] = float(item["netProfitMargin"])
+
+            # 资产负债率
+            if item.get("assetLiabilityRatio") is not None:
+                indicators["asset_liability_ratio"] = float(item["assetLiabilityRatio"])
+
+            # EPS (每股收益)
+            if item.get("eps") is not None:
+                indicators["eps"] = float(item["eps"])
+
+            return indicators
+
+        except Exception as e:
+            logger.error(f"Investoday get_financial_indicators failed for {symbol}: {e}")
+            return {}
 
     def get_tech_indicators(
         self,
