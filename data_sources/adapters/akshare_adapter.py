@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from ..base import DataSourceAdapter
 from ..models import Quote, KLine, BalanceSheet, IncomeStatement, CashFlowStatement
 from ..exceptions import DataSourceError
+from ..constants import LIMIT_UP_THRESHOLD, LIMIT_DOWN_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -733,8 +734,8 @@ class AKShareAdapter(DataSourceAdapter):
                     prev_close = klines[i-1].close
                     price_change_pct = (kline.close - prev_close) / prev_close * 100
 
-                    is_limit_up = price_change_pct >= 9.9  # 涨停
-                    is_limit_down = price_change_pct <= -9.9  # 跌停
+                    is_limit_up = price_change_pct >= LIMIT_UP_THRESHOLD  # 涨停
+                    is_limit_down = price_change_pct <= LIMIT_DOWN_THRESHOLD  # 跌停
 
                 result = {
                     "date": kline.datetime.strftime("%Y-%m-%d"),
