@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # 测试数据库
+  test-db:
+    image: postgres:15-alpine
+    container_name: alpha-quant-test-db
+    environment:
+      - POSTGRES_DB=test_stock_market
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres_test
+    ports:
+      - "5433:5432"  # 避免与开发环境冲突
+    volumes:
+      - test-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+    restart: unless-stopped
+
+  # 测试 Redis
+  test-redis:
+    image: redis:7-alpine
+    container_name: alpha-quant-test-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - test-redis-data:/data
+    networks:
+      - test-network
+    restart: unless-stopped
+
+  # Mock API Server (用于外部 API Mock)
+  mock-api:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile.mock
+    container_name: alpha-quant-mock-api
+    ports:
+      - "9000:9000"
+    networks:
+      - test-network
+    restart: unless-stopped
+
+  # API Server (测试模式)
+  api-server-test:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile.test
+    container_name: alpha-quant-api-test
+    ports:
+      - "8001:8000"
+    environment:
+      - APP_ENV=testing
+      - DEBUG=true
+      - TZ=Asia/Shanghai
+      - DATABASE_URL=postgresql://postgres:postgres_test@test-db:5432/test_stock_market
+      - REDIS_URL=redis://test-redis:6379/0
+      - TUSHARE_TOKEN=${TUSHARE_TOKEN:-mock_token}
+      - INVESTODAY_API_KEY=${INVESTODAY_API_KEY:-mock_key}
+      - API_SERVER__HOST=0.0.0.0
+      - API_SERVER__PORT=8000
+      - API_SERVER__API_KEY_SECRET=test_secret_key_123456
+      - API_SERVER__RATE_LIMIT_FREE=1000
+      - API_SERVER__RATE_LIMIT_STANDARD=10000
+      - API_SERVER__RATE_LIMIT_PREMIUM=100000
+      - USE_MOCK_API=${USE_MOCK_API:-true}
+      - MOCK_API_URL=http://mock-api:9000
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_started
+      mock-api:
+        condition: service_started
+    volumes:
+      - ./logs/test:/app/logs
+      - ./tests:/app/tests
+      - ./api_server:/app/api_server
+      - ./common:/app/common
+      - ./data_sources:/app/data_sources
+    networks:
+      - test-network
+    restart: unless-stopped
+
+volumes:
+  test-db-data:
+  test-redis-data:
+
+networks:
+  test-network:
+    driver: bridge
