@@ -570,15 +570,6 @@ class DataSourceAdapter(ABC):
         """
         pass
 
-    @property
-    def priority(self) -> int:
-        """
-        数据源优先级
-
-        Returns:
-            优先级数值，越小越优先，默认 100 (低优先级)
-        """
-        return 100
 
     def is_available(self) -> bool:
         """
