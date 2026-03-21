@@ -7,7 +7,7 @@ import logging
 from typing import List, Optional, Dict
 from datetime import datetime
 from ..base import DataSourceAdapter
-from ..models import Quote, KLine
+from ..models import Quote, KLine, BalanceSheet, IncomeStatement, CashFlowStatement
 from ..exceptions import DataSourceError
 
 logger = logging.getLogger(__name__)
@@ -232,19 +232,31 @@ class SinaAdapter(DataSourceAdapter):
         except Exception as e:
             raise DataSourceError("sina", f"Failed to get kline: {e}", e)
 
-    def get_balance_sheet(self, symbol: str, year: int, quarter: int) -> Optional:
+    def get_balance_sheet(self, symbol: str, year: int, quarter: int) -> Optional[BalanceSheet]:
         logger.warning("SinaFinance balance sheet not supported")
         return None
 
-    def get_income_statement(self, symbol: str, year: int, quarter: int) -> Optional:
+    def get_income_statement(self, symbol: str, year: int, quarter: int) -> Optional[IncomeStatement]:
         logger.warning("SinaFinance income statement not supported")
         return None
 
-    def get_cash_flow_statement(self, symbol: str, year: int, quarter: int) -> Optional:
+    def get_cash_flow_statement(self, symbol: str, year: int, quarter: int) -> Optional[CashFlowStatement]:
         logger.warning("SinaFinance cash flow statement not supported")
         return None
 
     def get_financial_indicators(self, symbol: str, year: int, quarter: int) -> Dict[str, float]:
+        """
+        获取财务指标
+
+        Args:
+            symbol: 股票代码
+            year: 年份
+            quarter: 季度 (1-4)
+
+        Returns:
+            指标字典 {"roe": 0.15, "gross_margin": 0.4, ...}
+        """
+        logger.warning("SinaFinance financial indicators not supported")
         return {}
 
     def _format_symbol(self, symbol: str) -> str:
