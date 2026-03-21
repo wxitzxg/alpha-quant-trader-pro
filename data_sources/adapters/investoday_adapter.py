@@ -247,16 +247,39 @@ class InvestodayAdapter(DataSourceAdapter):
 
         Returns:
             Quote 对象列表 (可能为空)
-
-        Raises:
-            DataSourceError: 数据源异常
         """
-        results = []
-        for symbol in symbols:
-            quote = self.get_realtime(symbol)
-            if quote:
-                results.append(quote)
-        return results
+        try:
+            # Use Investoday's batch endpoint if available
+            # Otherwise fall back to sequential calls
+            results = []
+
+            # Attempt batch API call
+            try:
+                data = self._call_api(
+                    endpoint="stock-quote/realtime-batch",
+                    method="POST",
+                    json_data={"stockCodes": symbols}
+                )
+
+                items = data.get("items", [])
+                for item in items:
+                    quote = self._parse_quote(item)
+                    results.append(quote)
+
+                return results
+
+            except DataSourceError:
+                # Batch API not available, fall back to sequential
+                logger.info("Batch API not available, falling back to sequential calls")
+                for symbol in symbols:
+                    quote = self.get_realtime(symbol)
+                    if quote:
+                        results.append(quote)
+                return results
+
+        except Exception as e:
+            logger.error(f"Investoday batch_get_realtime failed: {e}")
+            return []
 
     def _parse_kline(self, data: Dict[str, Any]) -> KLine:
         """
