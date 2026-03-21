@@ -1,16 +1,60 @@
 """
-配置加载模块
+股票市场模块配置模块
+统一从 common.config 获取配置
+Configuration module for stock market module
+Unified configuration loading from common.config
 """
-import json
-from pathlib import Path
-from typing import Dict, Any
 
-def load_config() -> Dict[str, Any]:
-    """加载配置文件"""
-    config_path = Path(__file__).parent / "database.json"
+from common.config import get_config
 
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    with open(config_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+def get_stock_market_config():
+    """
+    获取股票市场配置
+    Get stock market configuration
+
+    Returns:
+        StockMarketConfig: 股票市场配置对象
+    """
+    return get_config().stock_market
+
+
+def get_sync_config():
+    """
+    获取同步配置
+    Get sync configuration
+
+    Returns:
+        SyncConfig: 同步配置对象
+    """
+    return get_config().stock_market.sync
+
+
+def get_trading_hours():
+    """
+    获取交易时间配置
+    Get trading hours configuration
+
+    Returns:
+        TradingHoursConfig: 交易时间配置对象
+    """
+    return get_config().stock_market.trading_hours
+
+
+def get_data_retention_config():
+    """
+    获取数据保留配置
+    Get data retention configuration
+
+    Returns:
+        DataRetentionConfig: 数据保留配置对象
+    """
+    return get_config().stock_market.data_retention
+
+
+__all__ = [
+    'get_stock_market_config',
+    'get_sync_config',
+    'get_trading_hours',
+    'get_data_retention_config',
+]

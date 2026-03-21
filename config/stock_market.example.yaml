@@ -1,0 +1,61 @@
+# ==================== 股票市场配置示例 ====================
+# 此文件为配置示例，完整的配置说明请参考文档
+# This file is a configuration example, see docs for complete reference
+
+stock_market:
+  # ==================== 数据同步配置 ====================
+  sync:
+    # 是否启用增量同步 / Incremental sync
+    # true: 仅同步缺失的数据
+    # false: 全量同步所有数据
+    incremental: true
+
+    # 最大并发数 / Max concurrency
+    # 同时同步的股票数量
+    # 范围: 1-100
+    # 推荐值: 10-50 (根据系统资源调整)
+    concurrency: 10
+
+    # K线工作线程数 / K-line worker threads
+    # 专用的 K 线数据同步并发数
+    # 范围: 1-20
+    # 注意: kline_workers 应 <= concurrency
+    kline_workers: 5
+
+    # 重试次数 / Retry attempts
+    # 同步失败时的重试次数
+    # 范围: 0-10
+    retry_times: 3
+
+    # 重试延迟（秒）/ Retry delay (seconds)
+    # 每次重试之间的延迟
+    # 范围: 0.0-60.0
+    retry_delay: 1.0
+
+  # ==================== 数据保留策略 ====================
+  data_retention:
+    # K线数据保留天数 / K-line data retention days
+    # 范围: 1-3650 (约10年)
+    # 0 表示永久保留
+    # 示例: 365 (1年), 730 (2年), 3650 (10年)
+    kline_days: 365
+
+    # 基本面数据保留天数 / Fundamentals data retention days
+    # 范围: 1-3650 (约10年)
+    fundamentals_days: 730  # 2年
+
+  # ==================== 市场交易时间 ====================
+  trading_hours:
+    # A股上午开盘时间 / Morning open time
+    # 格式: HH:MM (24小时制)
+    # 范围: 00:00-23:59
+    morning_open: "09:30"
+
+    # A股上午收盘时间 / Morning close time
+    morning_close: "11:30"
+
+    # A股下午开盘时间 / Afternoon open time
+    afternoon_open: "13:00"
+
+    # A股下午收盘时间 / Afternoon close time
+    afternoon_close: "15:00"
