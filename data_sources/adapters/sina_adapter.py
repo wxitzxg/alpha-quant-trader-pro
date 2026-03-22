@@ -7,7 +7,7 @@ import logging
 from typing import List, Optional, Dict
 from datetime import datetime
 from ..base import DataSourceAdapter
-from ..models import Quote, KLine
+from ..models import Quote, KLine, BalanceSheet, IncomeStatement, CashFlowStatement
 from ..exceptions import DataSourceError
 
 logger = logging.getLogger(__name__)
@@ -31,6 +31,23 @@ class SinaAdapter(DataSourceAdapter):
         self.timeout = timeout
         self.base_url = "http://hq.sinajs.cn/list="
         logger.info("SinaAdapter initialized")
+
+    def is_available(self) -> bool:
+        """
+        Check if Sina Finance API is available
+
+        Returns:
+            True if service is reachable
+        """
+        try:
+            # Test connectivity with a simple request
+            test_symbol = self._format_symbol("600519")
+            url = f"{self.base_url}{test_symbol}"
+            response = requests.get(url, timeout=3)
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Sina health check failed: {e}")
+            return False
 
     @property
     def name(self) -> str:
@@ -232,19 +249,31 @@ class SinaAdapter(DataSourceAdapter):
         except Exception as e:
             raise DataSourceError("sina", f"Failed to get kline: {e}", e)
 
-    def get_balance_sheet(self, symbol: str, year: int, quarter: int) -> Optional:
+    def get_balance_sheet(self, symbol: str, year: int, quarter: int) -> Optional[BalanceSheet]:
         logger.warning("SinaFinance balance sheet not supported")
         return None
 
-    def get_income_statement(self, symbol: str, year: int, quarter: int) -> Optional:
+    def get_income_statement(self, symbol: str, year: int, quarter: int) -> Optional[IncomeStatement]:
         logger.warning("SinaFinance income statement not supported")
         return None
 
-    def get_cash_flow_statement(self, symbol: str, year: int, quarter: int) -> Optional:
+    def get_cash_flow_statement(self, symbol: str, year: int, quarter: int) -> Optional[CashFlowStatement]:
         logger.warning("SinaFinance cash flow statement not supported")
         return None
 
     def get_financial_indicators(self, symbol: str, year: int, quarter: int) -> Dict[str, float]:
+        """
+        获取财务指标
+
+        Args:
+            symbol: 股票代码
+            year: 年份
+            quarter: 季度 (1-4)
+
+        Returns:
+            指标字典 {"roe": 0.15, "gross_margin": 0.4, ...}
+        """
+        logger.warning("SinaFinance financial indicators not supported")
         return {}
 
     def _format_symbol(self, symbol: str) -> str:

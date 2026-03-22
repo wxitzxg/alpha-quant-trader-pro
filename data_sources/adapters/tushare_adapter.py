@@ -35,6 +35,25 @@ class TushareAdapter(DataSourceAdapter):
         self.pro = ts.pro_api(token)
         logger.info("TushareAdapter initialized")
 
+    def is_available(self) -> bool:
+        """
+        Check if Tushare API is available
+
+        Returns:
+            True if API token is valid and service is reachable
+        """
+        try:
+            # Test API connectivity with a lightweight call
+            self.pro.stock_basic(
+                ts_code="600519.SH",
+                fields="ts_code",
+                limit=1
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Tushare health check failed: {e}")
+            return False
+
     @property
     def name(self) -> str:
         return "tushare"
