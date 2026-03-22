@@ -112,25 +112,23 @@ class AccountService:
         """
         计算实际盈亏（历史卖出交易的累计盈利）
 
-        注意：这里简化处理，实际需要更精确的成本核算
+        使用 Transaction 表中的 realized_pl 字段
 
         Returns:
             实际盈亏
         """
         from portfolio_manager.repositories import TransactionRepository
-        from sqlalchemy.orm import Session
 
-        # 这里暂时直接查询数据库，后续可以注入 TransactionRepository
         # 获取当前 session
         session = self.cash_repo.session
 
-        # 查询所有卖出交易
+        # 查询所有卖出交易的实际盈亏
         sell_transactions = session.query(Transaction).filter_by(transaction_type='sell').all()
 
         # 计算总盈利
         total_profit = Decimal('0')
         for tx in sell_transactions:
-            # 卖出收入（amount 已扣除手续费）
-            total_profit += tx.amount
+            if tx.realized_pl is not None:
+                total_profit += tx.realized_pl
 
         return float(total_profit)
