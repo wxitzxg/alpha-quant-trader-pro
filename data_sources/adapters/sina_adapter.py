@@ -30,7 +30,21 @@ class SinaAdapter(DataSourceAdapter):
         super().__init__()  # 调用父类 __init__ 初始化 _priority
         self.timeout = timeout
         self.base_url = "http://hq.sinajs.cn/list="
+
+        # 创建 HTTP Session 复用连接
+        self._session = requests.Session()
+        self._session.headers.update({
+            "User-Agent": "Mozilla/5.0 (compatible; StockDataBot/1.0)",
+            "Accept": "text/html,application/xhtml+xml",
+            "Connection": "keep-alive"
+        })
+
         logger.info("SinaAdapter initialized")
+
+    def __del__(self):
+        """析构函数 - 清理连接"""
+        if hasattr(self, '_session'):
+            self._session.close()
 
     def is_available(self) -> bool:
         """
@@ -43,7 +57,7 @@ class SinaAdapter(DataSourceAdapter):
             # Test connectivity with a simple request
             test_symbol = self._format_symbol("600519")
             url = f"{self.base_url}{test_symbol}"
-            response = requests.get(url, timeout=3)
+            response = self._session.get(url, timeout=3)
             return response.status_code == 200
         except Exception as e:
             logger.error(f"Sina health check failed: {e}")
@@ -63,7 +77,7 @@ class SinaAdapter(DataSourceAdapter):
             sina_symbol = self._format_symbol(symbol)
             url = f"{self.base_url}{sina_symbol}"
 
-            response = requests.get(url, timeout=self.timeout)
+            response = self._session.get(url, timeout=self.timeout)
             response.encoding = 'gbk'
 
             if response.status_code != 200:
@@ -145,7 +159,7 @@ class SinaAdapter(DataSourceAdapter):
             sina_symbols = [self._format_symbol(s) for s in symbols]
             url = f"{self.base_url}{','.join(sina_symbols)}"
 
-            response = requests.get(url, timeout=self.timeout * 2)  # 批量查询增加超时
+            response = self._session.get(url, timeout=self.timeout * 2)  # 批量查询增加超时
             response.encoding = 'gbk'
 
             if response.status_code != 200:
@@ -213,7 +227,7 @@ class SinaAdapter(DataSourceAdapter):
                     'datalen': '1024'  # 最多1024条
                 }
 
-                response = requests.get(url, params=params, timeout=self.timeout)
+                response = self._session.get(url, params=params, timeout=self.timeout)
                 if response.status_code != 200:
                     return []
 
@@ -243,7 +257,7 @@ class SinaAdapter(DataSourceAdapter):
                 return klines
 
             else:
-                logger.warning(f"SinaFinance minute KLine not fully supported for {interval}")
+                logger.debug(f"SinaFinance minute KLine not fully supported for {interval}")
                 return []
 
         except Exception as e:
@@ -281,6 +295,18 @@ class SinaAdapter(DataSourceAdapter):
         格式化股票代码为新浪格式
 
         新浪格式: sh600519 (沪市) 或 sz000001 (深市)
+
+        Args:
+            symbol: 标准股票代码 (如 "600519")
+
+        Returns:
+            新浪格式代码 (如 "sh600519" 或 "sz000001")
+
+        Examples:
+            >>> adapter._format_symbol("600519")
+            'sh600519'
+            >>> adapter._format_symbol("000001")
+            'sz000001'
         """
         if symbol.startswith(('6', '9', '7')):
             return f"sh{symbol}"
@@ -292,6 +318,18 @@ class SinaAdapter(DataSourceAdapter):
         从新浪代码解析股票代码
 
         新浪格式: sh600519 -> 600519
+
+        Args:
+            sina_code: 新浪格式的股票代码 (如 "sh600519")
+
+        Returns:
+            标准股票代码 (如 "600519")
+
+        Examples:
+            >>> adapter._parse_symbol("sh600519")
+            '600519'
+            >>> adapter._parse_symbol("sz000001")
+            '000001'
         """
         if sina_code.startswith(('sh', 'sz')):
             return sina_code[2:]
@@ -302,6 +340,18 @@ class SinaAdapter(DataSourceAdapter):
         格式化股票代码为K线接口格式
 
         K线格式: sh0000001 或 sz0000001
+
+        Args:
+            symbol: 标准股票代码 (如 "600519")
+
+        Returns:
+            K线接口格式代码 (如 "sh600519" 或 "sz000001")
+
+        Examples:
+            >>> adapter._format_symbol_kline("600519")
+            'sh600519'
+            >>> adapter._format_symbol_kline("000001")
+            'sz000001'
         """
         if symbol.startswith(('6', '9', '7')):
             return f"sh{symbol}"

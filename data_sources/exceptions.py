@@ -19,7 +19,7 @@ class DataSourceError(Exception):
         source: str,
         message: str,
         original_error: Optional[Exception] = None
-    ):
+    ) -> None:
         """
         Args:
             source: 数据源名称 (如 "tushare", "akshare")

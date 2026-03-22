@@ -490,7 +490,6 @@ class InvestodayAdapter(DataSourceAdapter):
         Returns:
             (year, quarter) 元组
         """
-        from datetime import datetime
         dt = datetime.strptime(date_str, "%Y-%m-%d")
         year = dt.year
         month = dt.month
@@ -795,14 +794,14 @@ class InvestodayAdapter(DataSourceAdapter):
             logger.error(f"Investoday get_valuation failed for {symbol}: {e}")
             return []
 
-    def get_financial_indicators(
+    def get_financial_indicators_history(
         self,
         symbol: str,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None
     ) -> list[dict]:
         """
-        获取财务指标数据
+        获取财务指标历史数据
 
         Args:
             symbol: 股票代码
@@ -826,7 +825,7 @@ class InvestodayAdapter(DataSourceAdapter):
             )
             return data.get("items", [])
         except Exception as e:
-            logger.error(f"Investoday get_financial_indicators failed for {symbol}: {e}")
+            logger.error(f"Investoday get_financial_indicators_history failed for {symbol}: {e}")
             return []
 
     def get_dragon_tiger(
