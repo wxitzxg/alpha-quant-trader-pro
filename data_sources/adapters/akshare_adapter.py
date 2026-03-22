@@ -426,6 +426,81 @@ class AKShareAdapter(DataSourceAdapter):
             logger.error(f"AKShare get_stock_detail failed for {symbol}: {e}")
             raise DataSourceError("akshare", f"Failed to get stock detail: {e}", e)
 
+    def _calculate_ma(self, prices: np.ndarray, period: int, index: int) -> Optional[float]:
+        """
+        计算移动平均线
+
+        Args:
+            prices: 价格数组
+            period: 周期 (如 5, 10, 20)
+            index: 当前索引位置
+
+        Returns:
+            移动平均值，如果数据不足返回 None
+        """
+        if index < period - 1:
+            return None
+        return float(np.mean(prices[max(0, index-period+1):index+1]))
+
+    def _calculate_rsi(self, prices: np.ndarray, index: int) -> Optional[float]:
+        """
+        计算相对强弱指标 (RSI)
+
+        Args:
+            prices: 价格数组
+            index: 当前索引位置
+
+        Returns:
+            RSI 值 (0-100)，如果数据不足返回 None
+        """
+        if index < 14:
+            return None
+        gains = np.maximum(0, np.diff(prices[index-14:index+1]))
+        losses = np.abs(np.minimum(0, np.diff(prices[index-14:index+1])))
+        avg_gain = np.mean(gains)
+        avg_loss = np.mean(losses)
+        if avg_loss == 0:
+            return 100.0
+        rs = avg_gain / avg_loss
+        return 100 - (100 / (1 + rs))
+
+    def _calculate_kdj(self, close_prices: np.ndarray, high_prices: np.ndarray,
+                      low_prices: np.ndarray, index: int,
+                      prev_k: Optional[float], prev_d: Optional[float]) -> tuple[Optional[float], Optional[float], Optional[float]]:
+        """
+        计算 KDJ 指标
+
+        Args:
+            close_prices: 收盘价数组
+            high_prices: 最高价数组
+            low_prices: 最低价数组
+            index: 当前索引位置
+            prev_k: 前一个 K 值
+            prev_d: 前一个 D 值
+
+        Returns:
+            (K, D, J) 三元组
+        """
+        if index < 8:
+            return None, None, None
+
+        period_high = np.max(high_prices[max(0, index-8):index+1])
+        period_low = np.min(low_prices[max(0, index-8):index+1])
+        if period_high == period_low:
+            return None, None, None
+
+        rsv = (close_prices[index] - period_low) / (period_high - period_low) * 100
+
+        if index == 8:
+            k = rsv
+            d = rsv
+        else:
+            k = (2 * prev_k + rsv) / 3 if prev_k is not None else rsv
+            d = (2 * prev_d + k) / 3 if prev_d is not None else k
+
+        j = 3 * k - 2 * d if k is not None and d is not None else None
+        return float(k), float(d), float(j)
+
     def get_tech_indicators(
         self,
         symbol: str,
@@ -444,52 +519,36 @@ class AKShareAdapter(DataSourceAdapter):
             close_prices = np.array([k.close for k in klines])
             high_prices = np.array([k.high for k in klines])
             low_prices = np.array([k.low for k in klines])
-            volumes = np.array([k.volume for k in klines])
 
-            # 计算技术指标（简化版）
+            # 计算技术指标
             results = []
 
             for i, kline in enumerate(klines):
-                # 简单移动平均
-                ma5 = np.mean(close_prices[max(0, i-4):i+1]) if i >= 4 else None
-                ma10 = np.mean(close_prices[max(0, i-9):i+1]) if i >= 9 else None
-                ma20 = np.mean(close_prices[max(0, i-19):i+1]) if i >= 19 else None
+                # 计算移动平均线
+                ma5 = self._calculate_ma(close_prices, 5, i)
+                ma10 = self._calculate_ma(close_prices, 10, i)
+                ma20 = self._calculate_ma(close_prices, 20, i)
 
-                # RSI (简化版)
-                rsi = None
-                if i >= 14:
-                    gains = np.maximum(0, np.diff(close_prices[i-14:i+1]))
-                    losses = np.abs(np.minimum(0, np.diff(close_prices[i-14:i+1])))
-                    avg_gain = np.mean(gains)
-                    avg_loss = np.mean(losses)
-                    if avg_loss != 0:
-                        rs = avg_gain / avg_loss
-                        rsi = 100 - (100 / (1 + rs))
+                # 计算 RSI
+                rsi = self._calculate_rsi(close_prices, i)
 
-                # KDJ (简化版)
-                kdj_k = kdj_d = kdj_j = None
-                if i >= 8:
-                    period_high = np.max(high_prices[max(0, i-8):i+1])
-                    period_low = np.min(low_prices[max(0, i-8):i+1])
-                    if period_high != period_low:
-                        rsv = (close_prices[i] - period_low) / (period_high - period_low) * 100
-                        if i == 8:
-                            kdj_k = rsv
-                            kdj_d = rsv
-                        else:
-                            kdj_k = (2 * results[i-1]['kdj_k'] + rsv) / 3 if results[i-1]['kdj_k'] is not None else rsv
-                            kdj_d = (2 * results[i-1]['kdj_d'] + kdj_k) / 3 if results[i-1]['kdj_d'] is not None else kdj_k
-                        kdj_j = 3 * kdj_k - 2 * kdj_d if kdj_k is not None and kdj_d is not None else None
+                # 计算 KDJ
+                kdj_k, kdj_d, kdj_j = None, None, None
+                if i > 0 and results:
+                    kdj_k, kdj_d, kdj_j = self._calculate_kdj(
+                        close_prices, high_prices, low_prices, i,
+                        results[i-1]['kdj_k'], results[i-1]['kdj_d']
+                    )
 
                 result = {
                     "date": kline.datetime.strftime("%Y-%m-%d"),
-                    "ma5": float(ma5) if ma5 is not None else None,
-                    "ma10": float(ma10) if ma10 is not None else None,
-                    "ma20": float(ma20) if ma20 is not None else None,
-                    "rsi": float(rsi) if rsi is not None else None,
-                    "kdj_k": float(kdj_k) if kdj_k is not None else None,
-                    "kdj_d": float(kdj_d) if kdj_d is not None else None,
-                    "kdj_j": float(kdj_j) if kdj_j is not None else None,
+                    "ma5": ma5,
+                    "ma10": ma10,
+                    "ma20": ma20,
+                    "rsi": rsi,
+                    "kdj_k": kdj_k,
+                    "kdj_d": kdj_d,
+                    "kdj_j": kdj_j,
                     "macd": None,  # MACD 需要更复杂的计算
                     "macd_signal": None,
                     "macd_hist": None

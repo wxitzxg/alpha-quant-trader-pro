@@ -30,7 +30,9 @@ class TushareAdapter(DataSourceAdapter):
             timeout: 超时时间（秒）
         """
         super().__init__()
-        self.token = token
+        if not token or not token.strip():
+            raise ValueError("Tushare API token cannot be empty")
+        self.token = token.strip()
         self.timeout = timeout
         self.pro = ts.pro_api(token)
         logger.info("TushareAdapter initialized")

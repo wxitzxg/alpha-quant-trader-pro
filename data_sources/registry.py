@@ -74,16 +74,27 @@ class AdapterRegistry:
         Args:
             adapter_class: 适配器类
         """
-        # 通过实例化临时对象获取 name 属性
+        # 通过约定的命名规则获取适配器名称
+        # 优先使用类的 name 属性（如果是 property，则会在此处访问）
+        # 如果无法获取，则使用类名转换
+
+        # 方法1: 尝试直接访问 name 属性（不实例化）
+        adapter_name = None
         try:
-            temp_instance = adapter_class.__new__(adapter_class)
-            adapter_name = temp_instance.name
+            # 检查是否有 name 类属性或 property
+            if hasattr(adapter_class, 'name'):
+                name_attr = getattr(adapter_class, 'name')
+                if isinstance(name_attr, property):
+                    # 是 property，使用类名作为默认值
+                    adapter_name = adapter_class.__name__.lower().replace('adapter', '')
+                else:
+                    adapter_name = str(name_attr)
         except:
-            # 如果无法实例化，尝试直接访问类属性
-            adapter_name = getattr(adapter_class, 'name', None)
-            if isinstance(adapter_name, property):
-                # 对于 property，使用默认名称
-                adapter_name = adapter_class.__name__.lower().replace('adapter', '')
+            pass
+
+        # 方法2: 如果还是获取不到，使用类名转换
+        if not adapter_name:
+            adapter_name = adapter_class.__name__.lower().replace('adapter', '')
 
         if adapter_name in self._adapter_classes:
             logger.warning(f"Adapter {adapter_name} already registered, overwriting")

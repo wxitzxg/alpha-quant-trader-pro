@@ -5,6 +5,7 @@
 """
 
 import logging
+import threading
 from typing import List, Optional, Dict, Any
 from .base import DataSourceAdapter
 from .registry import AdapterRegistry
@@ -25,15 +26,20 @@ class DataSourceAggregator:
 
     _instance = None
     _initialized = False
+    _lock = threading.Lock()  # 线程锁，用于线程安全的单例模式
 
     def __new__(cls):
         """
-        单例模式
+        线程安全的单例模式 (Double-Checked Locking)
 
+        Returns:
+            DataSourceAggregator 实例
         """
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._initialized = False
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialized = False
         return cls._instance
 
     def __init__(self):
