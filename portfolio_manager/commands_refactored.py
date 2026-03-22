@@ -3,8 +3,9 @@
 用户股票管理模块 - 统一命令入口（重构版 - 使用 Repository 模式）
 """
 
-from typing import List, Optional
+from typing import List, Optional, ContextManager
 from datetime import datetime
+from contextlib import contextmanager
 from common.config import get_config
 from portfolio_manager.models import PositionModel, TransactionModel, AccountSummary
 from portfolio_manager.fee_calculator import FeeCalculator
@@ -87,28 +88,41 @@ class PortfolioCommands:
             # data_sources 模块不存在，继续运行
             pass
 
-        # 创建 Repository
-        with self.db_manager.get_session() as session:
-            self.position_repo = PositionRepository(session)
-            self.transaction_repo = TransactionRepository(session)
-            self.cash_repo = CashBalanceRepository(session)
-
         # 初始化服务（直接从统一配置获取手续费配置）
         self.fee_calculator = FeeCalculator(self.config.get_fee_config())
-        self.position_service = PositionService(self.position_repo, self.data_source)
-        self.account_service = AccountService(self.cash_repo, self.position_service)
-        self.transaction_service = TransactionService(
-            self.transaction_repo,
-            self.position_repo,
-            self.position_service,
-            self.account_service,
-            self.fee_calculator
-        )
 
     def _init_database(self) -> DatabaseManager:
         """初始化数据库连接"""
         db_url = self.config.get_database_url()
         return DatabaseManager(db_url)
+
+    @contextmanager
+    def _with_services(self):
+        """
+        上下文管理器：每次操作创建新的 session 和服务实例
+
+        使用示例：
+        >>> with self._with_services() as (position_service, account_service, transaction_service):
+        ...     result = position_service.get_position(symbol)
+        """
+        with self.db_manager.get_session() as session:
+            # 创建 Repository
+            position_repo = PositionRepository(session)
+            transaction_repo = TransactionRepository(session)
+            cash_repo = CashBalanceRepository(session)
+
+            # 创建服务
+            position_service = PositionService(position_repo, self.data_source)
+            account_service = AccountService(cash_repo, position_service)
+            transaction_service = TransactionService(
+                transaction_repo,
+                position_repo,
+                position_service,
+                account_service,
+                self.fee_calculator
+            )
+
+            yield position_service, account_service, transaction_service
 
     # ========== 持仓管理 ==========
 
@@ -126,7 +140,8 @@ class PortfolioCommands:
         Returns:
             PositionModel
         """
-        return self.position_service.add_position(symbol, quantity, cost_price)
+        with self._with_services() as (position_service, _, _):
+            return position_service.add_position(symbol, quantity, cost_price)
 
     def update_position(
         self,
@@ -147,7 +162,8 @@ class PortfolioCommands:
         Returns:
             PositionModel
         """
-        return self.position_service.update_position(symbol, quantity, cost_price)
+        with self._with_services() as (position_service, _, _):
+            return position_service.update_position(symbol, quantity, cost_price)
 
     def get_position(self, symbol: str) -> Optional[PositionModel]:
         """
@@ -159,7 +175,8 @@ class PortfolioCommands:
         Returns:
             PositionModel 或 None
         """
-        return self.position_service.get_position(symbol)
+        with self._with_services() as (position_service, _, _):
+            return position_service.get_position(symbol)
 
     def positions(self) -> List[PositionModel]:
         """
@@ -168,7 +185,8 @@ class PortfolioCommands:
         Returns:
             PositionModel 列表
         """
-        return self.position_service.get_all_positions()
+        with self._with_services() as (position_service, _, _):
+            return position_service.get_all_positions()
 
     # ========== 交易管理 ==========
 
@@ -192,7 +210,8 @@ class PortfolioCommands:
         Raises:
             InsufficientFundsError: 现金不足
         """
-        return self.transaction_service.record_buy(symbol, quantity, price)
+        with self._with_services() as (_, _, transaction_service):
+            return transaction_service.record_buy(symbol, quantity, price)
 
     def sell(self, symbol: str, quantity: int, price: float) -> TransactionModel:
         """
@@ -214,7 +233,8 @@ class PortfolioCommands:
         Raises:
             InsufficientSharesError: 持仓不足
         """
-        return self.transaction_service.record_sell(symbol, quantity, price)
+        with self._with_services() as (_, _, transaction_service):
+            return transaction_service.record_sell(symbol, quantity, price)
 
     def transactions(
         self,
@@ -233,9 +253,10 @@ class PortfolioCommands:
         Returns:
             TransactionModel 列表
         """
-        return self.transaction_service.get_transaction_history(
-            symbol, start_date, end_date
-        )
+        with self._with_services() as (_, _, transaction_service):
+            return transaction_service.get_transaction_history(
+                symbol, start_date, end_date
+            )
 
     # ========== 账户管理 ==========
 
@@ -254,7 +275,8 @@ class PortfolioCommands:
         Returns:
             AccountSummary
         """
-        return self.account_service.get_account_summary()
+        with self._with_services() as (_, account_service, _):
+            return account_service.get_account_summary()
 
     def cash_balance(self) -> float:
         """
@@ -263,7 +285,8 @@ class PortfolioCommands:
         Returns:
             现金余额
         """
-        return self.account_service.get_cash_balance()
+        with self._with_services() as (_, account_service, _):
+            return account_service.get_cash_balance()
 
     def add_cash(self, amount: float):
         """
@@ -272,7 +295,8 @@ class PortfolioCommands:
         Args:
             amount: 增加金额
         """
-        self.account_service.add_cash(amount)
+        with self._with_services() as (_, account_service, _):
+            account_service.add_cash(amount)
 
     # ========== 手续费管理 ==========
 

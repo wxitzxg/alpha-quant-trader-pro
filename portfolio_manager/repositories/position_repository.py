@@ -186,40 +186,79 @@ class CashBalanceRepository(BaseRepository[CashBalance]):
         super().__init__(session, CashBalance)
 
     def get_current_balance(self) -> float:
-        """获取当前现金余额"""
-        # 现金余额表通常只有一条记录
-        stmt = select(CashBalance).order_by(CashBalance.id.desc()).limit(1)
+        """获取当前现金余额（固定 id=1）"""
+        # 现金余额表固定 id=1
+        stmt = select(CashBalance).where(CashBalance.id == 1)
         result = self.session.execute(stmt).scalar_one_or_none()
         return float(result.amount) if result else 0.0
 
     def update_balance(self, amount: float) -> CashBalance:
         """
-        更新现金余额（累加）
+        更新现金余额（累加，使用乐观锁）
 
         Args:
             amount: 变更金额（正数为增加，负数为减少）
 
         Returns:
             更新后的现金余额记录
-        """
-        # 获取当前余额
-        stmt = select(CashBalance).order_by(CashBalance.id.desc()).limit(1)
-        current = self.session.execute(stmt).scalar_one_or_none()
 
-        if current:
-            # 更新现有记录
-            current.amount += amount
-            current.updated_at = datetime.now()
-            return current
-        else:
-            # 创建新记录
-            new_balance = CashBalance(amount=amount)
-            self.add(new_balance)
-            return new_balance
+        Raises:
+            BusinessError: 乐观锁冲突时重试
+        """
+        from common.exceptions import BusinessError
+
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # 获取当前余额（固定 id=1）
+                stmt = select(CashBalance).where(CashBalance.id == 1)
+                current = self.session.execute(stmt).scalar_one_or_none()
+
+                if current:
+                    # 使用乐观锁更新
+                    old_version = current.version
+                    new_amount = current.amount + Decimal(str(amount))
+                    new_version = old_version + 1
+
+                    # 执行更新，检查版本号是否匹配
+                    updated_rows = self.session.query(CashBalance).filter(
+                        CashBalance.id == 1,
+                        CashBalance.version == old_version
+                    ).update({
+                        CashBalance.amount: new_amount,
+                        CashBalance.version: new_version,
+                        CashBalance.updated_at: datetime.now()
+                    })
+
+                    if updated_rows == 0:
+                        # 乐观锁冲突，重试
+                        if attempt < max_retries - 1:
+                            continue
+                        else:
+                            raise BusinessError("现金余额更新失败：并发冲突，请重试")
+
+                    # 刷新对象
+                    self.session.refresh(current)
+                    return current
+                else:
+                    # 创建新记录（固定 id=1）
+                    new_balance = CashBalance(
+                        id=1,
+                        amount=Decimal(str(amount)),
+                        version=0
+                    )
+                    self.add(new_balance)
+                    return new_balance
+
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    continue
+                else:
+                    raise BusinessError(f"现金余额更新失败: {str(e)}")
 
     def set_balance(self, amount: float) -> CashBalance:
         """
-        设置现金余额（覆盖）
+        设置现金余额（覆盖，使用乐观锁）
 
         Args:
             amount: 新的余额
@@ -227,20 +266,53 @@ class CashBalanceRepository(BaseRepository[CashBalance]):
         Returns:
             现金余额记录
         """
-        # 获取当前余额
-        stmt = select(CashBalance).order_by(CashBalance.id.desc()).limit(1)
-        current = self.session.execute(stmt).scalar_one_or_none()
+        from common.exceptions import BusinessError
 
-        if current:
-            # 更新现有记录
-            current.amount = amount
-            current.updated_at = datetime.now()
-            return current
-        else:
-            # 创建新记录
-            new_balance = CashBalance(amount=amount)
-            self.add(new_balance)
-            return new_balance
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # 获取当前余额（固定 id=1）
+                stmt = select(CashBalance).where(CashBalance.id == 1)
+                current = self.session.execute(stmt).scalar_one_or_none()
+
+                if current:
+                    # 使用乐观锁更新
+                    old_version = current.version
+                    new_version = old_version + 1
+
+                    updated_rows = self.session.query(CashBalance).filter(
+                        CashBalance.id == 1,
+                        CashBalance.version == old_version
+                    ).update({
+                        CashBalance.amount: Decimal(str(amount)),
+                        CashBalance.version: new_version,
+                        CashBalance.updated_at: datetime.now()
+                    })
+
+                    if updated_rows == 0:
+                        if attempt < max_retries - 1:
+                            continue
+                        else:
+                            raise BusinessError("现金余额设置失败：并发冲突，请重试")
+
+                    # 刷新对象
+                    self.session.refresh(current)
+                    return current
+                else:
+                    # 创建新记录（固定 id=1）
+                    new_balance = CashBalance(
+                        id=1,
+                        amount=Decimal(str(amount)),
+                        version=0
+                    )
+                    self.add(new_balance)
+                    return new_balance
+
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    continue
+                else:
+                    raise BusinessError(f"现金余额设置失败: {str(e)}")
 
     def get_balance_history(self, limit: int = 10) -> List[CashBalance]:
         """

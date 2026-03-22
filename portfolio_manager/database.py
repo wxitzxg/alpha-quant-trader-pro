@@ -50,6 +50,8 @@ class Transaction(Base):
     amount = Column(DECIMAL(15, 4), nullable=False, comment='交易金额（扣除手续费后）')
     fee = Column(DECIMAL(10, 4), nullable=False, comment='手续费')
     transaction_date = Column(DateTime, nullable=False, default=datetime.now)
+    cost_basis = Column(DECIMAL(15, 4), nullable=True, comment='成本基础（买入时的成本，卖出时的加权平均成本）')
+    realized_pl = Column(DECIMAL(15, 4), nullable=True, comment='实际盈亏（仅卖出交易有值）')
 
     __table_args__ = (
         Index('idx_transaction_symbol', 'symbol'),
@@ -58,9 +60,10 @@ class Transaction(Base):
 
 
 class CashBalance(Base):
-    """现金余额表（单条记录）"""
+    """现金余额表（单条记录，id 固定为 1）"""
     __tablename__ = 'cash_balance'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, default=1, comment='固定 ID 为 1')
     amount = Column(DECIMAL(15, 4), nullable=False, default=0, comment='现金余额')
+    version = Column(Integer, nullable=False, default=0, comment='乐观锁版本号')
     updated_at = Column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())

@@ -93,6 +93,8 @@ class TransactionService:
                 fee=Decimal(str(fee)),
                 transaction_date=transaction_date or datetime.now()
             )
+            # 设置买入交易的成本基础
+            transaction.cost_basis = Decimal(str(amount))
             self.transaction_repo.add(transaction)
 
             # 更新持仓
@@ -162,7 +164,7 @@ class TransactionService:
             self.transaction_repo.add(transaction)
 
             # 更新持仓
-            self._update_position_on_sell(symbol, quantity)
+            self._update_position_on_sell(symbol, quantity, transaction)
 
             # 增加现金
             self.account_service.add_cash(total_amount)
@@ -199,12 +201,24 @@ class TransactionService:
             position.calculate_metrics()
             self.position_repo.add(position)
 
-    def _update_position_on_sell(self, symbol: str, quantity: int):
-        """卖出后更新持仓"""
+    def _update_position_on_sell(self, symbol: str, quantity: int, transaction: Transaction):
+        """卖出后更新持仓并计算成本和盈亏"""
         position = self.position_repo.get_by_symbol(symbol)
 
         if not position:
             raise BusinessError(f"持仓 {symbol} 不存在")
+
+        # 计算成本基础（使用加权平均成本）
+        cost_basis_per_share = position.cost_price
+        total_cost_basis = Decimal(str(quantity)) * cost_basis_per_share
+
+        # 计算实际盈亏
+        sale_proceeds = transaction.amount + transaction.fee  # 销售收入（不含手续费）
+        realized_pl = sale_proceeds - total_cost_basis
+
+        # 更新交易记录
+        transaction.cost_basis = total_cost_basis
+        transaction.realized_pl = realized_pl
 
         if position.quantity <= quantity:
             # 全部卖出，删除持仓
