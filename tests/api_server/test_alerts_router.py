@@ -10,22 +10,27 @@ from unittest.mock import Mock, patch, MagicMock
 from fastapi.testclient import TestClient
 from datetime import datetime
 
-
 from api_server.main import app
+from .test_utils import (
+    TEST_STOCK_CODE,
+    TEST_STOCK_CODE_2,
+    assert_success_response,
+    assert_error_response
+)
 
 
 class TestAlertsAPI:
     """风险提示 API 测试"""
 
     @pytest.fixture
-    def client(self):
+    def client(self) -> TestClient:
         """创建测试客户端"""
-        client = TestClient(app)
-        client.headers["X-API-Key"] = "sk_test_your-secret-key-change-in-production"
-        return client
+        test_client = TestClient(app)
+        test_client.headers["X-API-Key"] = "sk_test_your-secret-key-change-in-production"
+        return test_client
 
     # ========== 触发的告警测试 ==========
-    def test_get_triggered_alerts_success(self, client):
+    def test_get_triggered_alerts_success(self, client: TestClient) -> None:
         """测试获取触发的告警 - 成功"""
         with patch('api_server.routers.alerts.check_price_alerts') as mock_price, \
              patch('api_server.routers.alerts.check_technical_alerts') as mock_tech, \
@@ -34,7 +39,7 @@ class TestAlertsAPI:
             mock_price.return_value = [
                 {
                     "type": "PRICE_ABOVE_THRESHOLD",
-                    "stock_code": "600519",
+                    "stock_code": TEST_STOCK_CODE,
                     "message": "Price exceeded threshold",
                     "trigger_time": datetime.now().isoformat()
                 }
@@ -46,13 +51,13 @@ class TestAlertsAPI:
 
             assert response.status_code == 200
             data = response.json()
-            assert data["success"] is True
+            assert_success_response(data)
             assert "alerts" in data["data"]
             assert len(data["data"]["alerts"]) > 0
             assert data["data"]["alerts"][0]["type"] == "PRICE_ABOVE_THRESHOLD"
 
     # ========== 股票告警测试 ==========
-    def test_get_stock_alerts_success(self, client):
+    def test_get_stock_alerts_success(self, client: TestClient) -> None:
         """测试获取股票告警 - 成功"""
         with patch('api_server.routers.alerts.check_price_alerts') as mock_price, \
              patch('api_server.routers.alerts.check_technical_alerts') as mock_tech:
@@ -60,7 +65,7 @@ class TestAlertsAPI:
             mock_price.return_value = [
                 {
                     "type": "PRICE_HIGH_RISK",
-                    "stock_code": "600519",
+                    "stock_code": TEST_STOCK_CODE,
                     "message": "High price risk",
                     "trigger_time": datetime.now().isoformat()
                 }
@@ -68,22 +73,22 @@ class TestAlertsAPI:
             mock_tech.return_value = [
                 {
                     "type": "TECHNICAL_OVERBOUGHT",
-                    "stock_code": "600519",
+                    "stock_code": TEST_STOCK_CODE,
                     "message": "RSI overbought",
                     "trigger_time": datetime.now().isoformat()
                 }
             ]
 
-            response = client.get("/api/v1/alerts/stock/600519")
+            response = client.get(f"/api/v1/alerts/stock/{TEST_STOCK_CODE}")
 
             assert response.status_code == 200
             data = response.json()
-            assert data["success"] is True
+            assert_success_response(data)
             assert "alerts" in data["data"]
             assert "risk_level" in data["data"]
             assert len(data["data"]["alerts"]) >= 2
 
-    def test_get_stock_alerts_no_alerts(self, client):
+    def test_get_stock_alerts_no_alerts(self, client: TestClient) -> None:
         """测试获取股票告警 - 无告警"""
         with patch('api_server.routers.alerts.check_price_alerts') as mock_price, \
              patch('api_server.routers.alerts.check_technical_alerts') as mock_tech:
@@ -91,16 +96,16 @@ class TestAlertsAPI:
             mock_price.return_value = []
             mock_tech.return_value = []
 
-            response = client.get("/api/v1/alerts/stock/000001")
+            response = client.get(f"/api/v1/alerts/stock/{TEST_STOCK_CODE_2}")
 
             assert response.status_code == 200
             data = response.json()
-            assert data["success"] is True
+            assert_success_response(data)
             assert len(data["data"]["alerts"]) == 0
             assert data["data"]["risk_level"] == "LOW"
 
     # ========== 监控组合风险测试 ==========
-    def test_monitor_portfolio_risks_success(self, client):
+    def test_monitor_portfolio_risks_success(self, client: TestClient) -> None:
         """测试监控组合风险 - 成功"""
         with patch('api_server.routers.alerts.check_portfolio_risk_alerts') as mock_portfolio, \
              patch('api_server.routers.alerts.PortfolioService') as mock_service:
@@ -119,8 +124,8 @@ class TestAlertsAPI:
             mock_portfolio_service.get_all_positions.return_value = {
                 "success": True,
                 "data": [
-                    {"symbol": "600519", "market_value": 50000},
-                    {"symbol": "000001", "market_value": 30000},
+                    {"symbol": TEST_STOCK_CODE, "market_value": 50000},
+                    {"symbol": TEST_STOCK_CODE_2, "market_value": 30000},
                 ]
             }
 
@@ -128,12 +133,12 @@ class TestAlertsAPI:
 
             assert response.status_code == 200
             data = response.json()
-            assert data["success"] is True
+            assert_success_response(data)
             assert "alerts" in data["data"]
             assert "portfolio_metrics" in data["data"]
             assert data["data"]["portfolio_metrics"]["positions_count"] == 2
 
-    def test_monitor_portfolio_risks_empty(self, client):
+    def test_monitor_portfolio_risks_empty(self, client: TestClient) -> None:
         """测试监控组合风险 - 空持仓"""
         with patch('api_server.routers.alerts.check_portfolio_risk_alerts') as mock_portfolio, \
              patch('api_server.routers.alerts.PortfolioService') as mock_service:
@@ -151,12 +156,12 @@ class TestAlertsAPI:
 
             assert response.status_code == 200
             data = response.json()
-            assert data["success"] is True
+            assert_success_response(data)
             assert len(data["data"]["alerts"]) == 0
             assert data["data"]["portfolio_metrics"]["positions_count"] == 0
 
     # ========== 边界测试 ==========
-    def test_get_stock_alerts_invalid_code(self, client):
+    def test_get_stock_alerts_invalid_code(self, client: TestClient) -> None:
         """测试获取股票告警 - 无效代码"""
         with patch('api_server.routers.alerts.check_price_alerts') as mock_price, \
              patch('api_server.routers.alerts.check_technical_alerts') as mock_tech:
@@ -171,10 +176,9 @@ class TestAlertsAPI:
             assert data["success"] is True
 
     # ========== 异常测试 ==========
-    def test_get_triggered_alerts_exception(self, client):
+    def test_get_triggered_alerts_exception(self, client: TestClient) -> None:
         """测试触发的告警 - 异常"""
         with patch('api_server.routers.alerts.check_price_alerts') as mock_price:
-
             mock_price.side_effect = Exception("Alert check error")
 
             response = client.get("/api/v1/alerts/triggered")
@@ -183,11 +187,10 @@ class TestAlertsAPI:
             data = response.json()
             assert data["success"] is False
 
-    def test_monitor_portfolio_exception(self, client):
+    def test_monitor_portfolio_exception(self, client: TestClient) -> None:
         """测试监控组合风险 - 异常"""
         with patch('api_server.routers.alerts.check_portfolio_risk_alerts') as mock_portfolio, \
              patch('api_server.routers.alerts.PortfolioService') as mock_service:
-
             mock_portfolio.side_effect = Exception("Portfolio check error")
 
             response = client.post("/api/v1/alerts/portfolio/monitor")
