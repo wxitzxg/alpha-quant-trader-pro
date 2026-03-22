@@ -64,6 +64,26 @@ class InvestodayAdapter(DataSourceAdapter):
 
         logger.info("InvestodayAdapter initialized")
 
+    def is_available(self) -> bool:
+        """
+        Check if Investoday API is available
+
+        Returns:
+            True if API key is valid and service is reachable
+        """
+        try:
+            # Test API connectivity
+            self._call_api(
+                endpoint="stock-quote/realtime",
+                method="GET",
+                params={"stockCode": "600519"},
+                timeout=5
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Investoday health check failed: {e}")
+            return False
+
     @property
     def name(self) -> str:
         """数据源唯一标识"""

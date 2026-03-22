@@ -32,6 +32,23 @@ class SinaAdapter(DataSourceAdapter):
         self.base_url = "http://hq.sinajs.cn/list="
         logger.info("SinaAdapter initialized")
 
+    def is_available(self) -> bool:
+        """
+        Check if Sina Finance API is available
+
+        Returns:
+            True if service is reachable
+        """
+        try:
+            # Test connectivity with a simple request
+            test_symbol = self._format_symbol("600519")
+            url = f"{self.base_url}{test_symbol}"
+            response = requests.get(url, timeout=3)
+            return response.status_code == 200
+        except Exception as e:
+            logger.error(f"Sina health check failed: {e}")
+            return False
+
     @property
     def name(self) -> str:
         return "sina"

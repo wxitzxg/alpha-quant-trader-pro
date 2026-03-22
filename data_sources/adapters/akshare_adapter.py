@@ -44,6 +44,21 @@ class AKShareAdapter(DataSourceAdapter):
         self.timeout = timeout
         logger.info("AKShareAdapter initialized")
 
+    def is_available(self) -> bool:
+        """
+        Check if AKShare is available
+
+        Returns:
+            True if service is reachable
+        """
+        try:
+            # Test with a lightweight call
+            df = ak.stock_zh_a_spot_em()
+            return len(df) > 0
+        except Exception as e:
+            logger.error(f"AKShare health check failed: {e}")
+            return False
+
     @property
     def name(self) -> str:
         return "akshare"
