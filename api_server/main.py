@@ -59,10 +59,28 @@ async def lifespan(app: FastAPI):
     logger.info(f"环境: {'开发' if settings.DEBUG else '生产'}")
     logger.info(f"数据库: {settings.DATABASE_URL}")
 
+    # ✅ 初始化数据库管理器并同步表
+    from common.database import DatabaseManager
+    from common.config import get_config
+
+    config = get_config()
+    db_url = config.get_database_url()
+
+    db_manager = DatabaseManager(db_url)
+
+    # ✅ 自动创建所有表 (如果不存在)
+    logger.info("正在同步数据库表...")
+    db_manager.create_all()
+    logger.info("数据库表同步完成")
+
+    # 存储到 app.state 供其他地方使用
+    app.state.db_manager = db_manager
+
     yield
 
     # 关闭时
     logger.info("API Server 正在关闭...")
+    db_manager.dispose()
 
 
 # 创建 FastAPI 应用
