@@ -28,16 +28,32 @@ def check_docker_installed():
 
 
 def check_docker_compose_installed():
-    """检查 Docker Compose 是否安装"""
+    """检查 Docker Compose 是否安装（支持 V1 和 V2）"""
+    # 先尝试 V1 (docker-compose)
     try:
         result = subprocess.run(
-            ["docker-compose", "--version"],
+            ["docker", "compose", "--version"],
             capture_output=True,
             text=True,
             timeout=5
         )
         if result.returncode == 0:
             print(f"✓ Docker Compose: {result.stdout.strip()}")
+            return True
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass  # V1 不存在，尝试 V2
+
+    # 尝试 V2 (docker compose)
+    try:
+        result = subprocess.run(
+            ["docker", "compose", "version"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            version_info = result.stdout.strip() or result.stderr.strip()
+            print(f"✓ Docker Compose: {version_info}")
             return True
         else:
             print("❌ Docker Compose 未安装或不可用")
@@ -94,7 +110,7 @@ def get_service_status(service_name):
     """获取服务状态"""
     try:
         result = subprocess.run(
-            ["docker-compose", "-f", "docker-compose.test.yml", "ps", "-q", service_name],
+            ["docker", "compose", "-f", "docker-compose.test.yml", "ps", "-q", service_name],
             capture_output=True,
             text=True,
             timeout=5
@@ -114,7 +130,7 @@ def wait_for_service_health(service_name, timeout=60, interval=2):
     while time.time() - start_time < timeout:
         try:
             result = subprocess.run(
-                ["docker-compose", "-f", "docker-compose.test.yml", "ps", service_name],
+                ["docker", "compose", "-f", "docker-compose.test.yml", "ps", service_name],
                 capture_output=True,
                 text=True,
                 timeout=5
@@ -202,7 +218,7 @@ def setup_test_environment(force=False):
     print("\n📦 启动 Docker 服务...")
     try:
         result = subprocess.run(
-            ["docker-compose", "-f", "docker-compose.test.yml", "up", "-d"],
+            ["docker", "compose", "-f", "docker-compose.test.yml", "up", "-d"],
             capture_output=True,
             text=True,
             timeout=120
@@ -247,7 +263,7 @@ def teardown_test_environment(force=False, purge=False):
             return False
 
     try:
-        cmd = ["docker-compose", "-f", "docker-compose.test.yml", "down"]
+        cmd = ["docker", "compose", "-f", "docker-compose.test.yml", "down"]
         if purge:
             cmd.append("--volumes")
 
@@ -285,7 +301,7 @@ def show_test_environment_status():
     # 检查服务
     try:
         result = subprocess.run(
-            ["docker-compose", "-f", "docker-compose.test.yml", "ps"],
+            ["docker", "compose", "-f", "docker-compose.test.yml", "ps"],
             capture_output=True,
             text=True,
             timeout=10
@@ -327,7 +343,7 @@ def verify_test_environment():
     # 检查服务是否运行
     try:
         result = subprocess.run(
-            ["docker-compose", "-f", "docker-compose.test.yml", "ps"],
+            ["docker", "compose", "-f", "docker-compose.test.yml", "ps"],
             capture_output=True,
             text=True,
             timeout=10
