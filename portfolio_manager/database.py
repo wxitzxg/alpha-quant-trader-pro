@@ -4,12 +4,10 @@ SQLAlchemy ORM 模型定义
 """
 
 from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, TIMESTAMP, Index
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from datetime import datetime
 from decimal import Decimal
-
-Base = declarative_base()
+from common.database import Base
 
 
 class Position(Base):

@@ -226,3 +226,14 @@ tests/.env.test
 reports/
 logs/test/
 
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+.env.test
+.env.production
+
+# 配置文件（本地开发）
+config/local.yaml
+config/config.local.yaml
