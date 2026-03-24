@@ -53,7 +53,7 @@ DailyReport.metadata.create_all(engine)
 ### 2. 配置环境变量
 
 ```bash
-export DATABASE_URL="postgresql://localhost/stock_market"
+export DATABASE__URL="postgresql://localhost/stock_market"
 ```
 
 ### 3. 运行模拟交易

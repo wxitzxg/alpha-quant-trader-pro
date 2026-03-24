@@ -396,8 +396,8 @@ def test_database_connection():
 
         # Check connection string
         import os
-        db_url = os.getenv("DATABASE_URL")
-        logger.error(f"DATABASE_URL: {db_url}")
+        db_url = os.getenv("DATABASE__URL")
+        logger.error(f"DATABASE__URL: {db_url}")
 
         # Test PostgreSQL directly
         try:
@@ -418,7 +418,7 @@ sudo systemctl status postgresql
 psql -U postgres -c "\l"
 
 # Check connection string format
-echo $DATABASE_URL
+echo $DATABASE__URL
 # Should be: postgresql://user:password@host:port/database
 
 # Test connection manually
@@ -670,7 +670,7 @@ from sqlalchemy import create_engine
 
 # Enable echo for development
 engine = create_engine(
-    DATABASE_URL,
+    DATABASE__URL,
     echo=True,  # Log all SQL queries
     echo_pool=True  # Log connection pool events
 )

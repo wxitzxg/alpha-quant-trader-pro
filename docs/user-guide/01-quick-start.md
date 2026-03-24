@@ -43,7 +43,7 @@ cp .env.example .env
 
 **Required Settings in `.env`**:
 ```bash
-DATABASE_URL=postgresql://user:password@localhost/stock_market
+DATABASE__URL=postgresql://user:password@localhost/stock_market
 TUSHARE_TOKEN=your_tushare_token_here
 ```
 
@@ -241,7 +241,7 @@ You've just completed the 5-minute quick start! You now know how to:
 ## ❓ Common Issues
 
 ### Database Connection Failed
-**Solution**: Check your `DATABASE_URL` in `.env` file and ensure PostgreSQL is running.
+**Solution**: Check your `DATABASE__URL` in `.env` file and ensure PostgreSQL is running.
 
 ### Tushare API Error
 **Solution**: Get a free token from [Tushare](https://tushare.pro/) and update `TUSHARE_TOKEN` in `.env`.

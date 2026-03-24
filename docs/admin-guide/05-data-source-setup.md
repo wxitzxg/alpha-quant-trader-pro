@@ -86,7 +86,7 @@ AKSHARE_TIMEOUT=30
 from stock_market.services import StockService, KLineService
 from common.database import DatabaseManager
 
-db = DatabaseManager(os.getenv('DATABASE_URL'))
+db = DatabaseManager(os.getenv('DATABASE__URL'))
 stock_service = StockService(db.get_session())
 
 # Sync all stocks

@@ -56,8 +56,8 @@ services:
       - APP_ENV=testing
       - DEBUG=true
       - TZ=Asia/Shanghai
-      - DATABASE_URL=postgresql://postgres:postgres_test@test-db:5432/test_stock_market
-      - REDIS_URL=redis://test-redis:6379/0
+      - DATABASE__URL=postgresql://postgres:postgres_test@test-db:5432/test_stock_market
+      - REDIS__URL=redis://test-redis:6379/0
       - TUSHARE_TOKEN=${TUSHARE_TOKEN:-mock_token}
       - INVESTODAY_API_KEY=${INVESTODAY_API_KEY:-mock_key}
       - API_SERVER__HOST=0.0.0.0

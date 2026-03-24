@@ -14,7 +14,7 @@ cp .env.example .env
 
 ```bash
 # 修改数据库连接
-DATABASE_URL=postgresql://你的用户名:你的密码@localhost:5432/alpha_quant
+DATABASE__URL=postgresql://你的用户名:你的密码@localhost:5432/alpha_quant
 ```
 
 ### 步骤 3: 验证配置
@@ -48,7 +48,7 @@ INFO - Application startup complete.
 cp .env.example .env.test
 
 # 编辑 .env.test，修改为测试数据库
-# DATABASE_URL=postgresql://postgres:postgres_test@localhost:5432/test_stock_market
+# DATABASE__URL=postgresql://postgres:postgres_test@localhost:5432/test_stock_market
 
 # 运行测试
 pytest tests/ -v
@@ -79,7 +79,7 @@ Git 已配置忽略这些文件，但请务必确认。
 
 **Q: 数据库连接失败？**
 
-A: 检查 DATABASE_URL 格式和数据库服务是否运行
+A: 检查 DATABASE__URL 格式和数据库服务是否运行
 
 **Q: 配置未生效？**
 

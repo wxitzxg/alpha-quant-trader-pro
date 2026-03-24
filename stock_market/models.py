@@ -81,7 +81,7 @@ class KLine(Base):
     # 约束
     __table_args__ = (
         UniqueConstraint('symbol', 'date', 'interval', name='uix_symbol_date_interval'),
-        Index('idx_symbol_interval', 'symbol', 'interval'),
+        Index('idx_kline_symbol_interval', 'symbol', 'interval'),
         Index('idx_date_interval', 'date', 'interval'),
     )
 
@@ -116,7 +116,7 @@ class SyncRecord(Base):
     # 索引
     __table_args__ = (
         Index('idx_sync_type_created', 'sync_type', 'created_at'),
-        Index('idx_symbol_interval', 'symbol', 'interval'),
+        Index('idx_sync_symbol_interval', 'symbol', 'interval'),
     )
 
     def __repr__(self):

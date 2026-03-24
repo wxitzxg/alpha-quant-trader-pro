@@ -193,7 +193,7 @@ nano .env  # or use your preferred editor
 **Required Configuration in `.env`**:
 ```bash
 # Database Configuration
-DATABASE_URL=postgresql://stock_user:your_secure_password@localhost:5432/stock_market
+DATABASE__URL=postgresql://stock_user:your_secure_password@localhost:5432/stock_market
 
 # Tushare Configuration (Get token from https://tushare.pro/)
 TUSHARE_TOKEN=your_tushare_token_here
@@ -203,7 +203,7 @@ ENVIRONMENT=development  # or production
 LOG_LEVEL=INFO
 
 # Optional: Redis Configuration (for caching)
-REDIS_URL=redis://localhost:6379/0
+REDIS__URL=redis://localhost:6379/0
 ```
 
 **Getting Tushare Token**:
@@ -298,11 +298,11 @@ The application will be available at:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `DATABASE_URL` | ✅ Yes | - | PostgreSQL connection string |
+| `DATABASE__URL` | ✅ Yes | - | PostgreSQL connection string |
 | `TUSHARE_TOKEN` | ✅ Yes | - | Tushare API token |
 | `ENVIRONMENT` | No | development | Environment (development/production) |
 | `LOG_LEVEL` | No | INFO | Logging level (DEBUG/INFO/WARNING/ERROR) |
-| `REDIS_URL` | No | - | Redis connection (optional) |
+| `REDIS__URL` | No | - | Redis connection (optional) |
 | `DATA_SOURCE` | No | tushare | Primary data source (tushare/akshare/sina) |
 
 ### Configuration Files

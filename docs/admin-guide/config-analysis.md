@@ -27,10 +27,10 @@
   - DEBUG: bool (从环境变量读取)
 
 - **数据库配置**
-  - DATABASE_URL: str (从环境变量读取)
+  - DATABASE__URL: str (从环境变量读取)
 
 - **Redis配置**
-  - REDIS_URL: Optional[str] (从环境变量读取)
+  - REDIS__URL: Optional[str] (从环境变量读取)
 
 - **认证配置**
   - API_KEY_SECRET: str (从环境变量读取)
@@ -85,7 +85,7 @@ trading:
   market_open_time: "09:30"
 
 database:
-  url: "${DATABASE_URL}" (环境变量)
+  url: "${DATABASE__URL}" (环境变量)
 
 logging:
   level: "INFO"
@@ -256,12 +256,12 @@ indicators: Dict[str, Any] = {}
 
 ### 必需环境变量
 - `APP_ENV`: 运行环境 (development/testing/production)
-- `DATABASE_URL`: 数据库连接字符串
+- `DATABASE__URL`: 数据库连接字符串
 - `API_KEY_SECRET`: API密钥密钥
 
 ### 可选环境变量
 - `DEBUG`: 调试模式 (true/false)
-- `REDIS_URL`: Redis连接字符串
+- `REDIS__URL`: Redis连接字符串
 - `LOG_LEVEL`: 日志级别 (DEBUG/INFO/WARNING/ERROR)
 - `TZ`: 时区设置
 

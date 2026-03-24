@@ -887,7 +887,7 @@ pytest tests/ --cov=. --cov-report=html
 
 ```python
 # ❌ DON'T: Hardcode secrets
-DATABASE_URL = "postgresql://user:password@localhost/db"
+DATABASE__URL = "postgresql://user:password@localhost/db"
 API_KEY = "sk-1234567890abcdef"
 SECRET_KEY = "hardcoded_secret"
 
@@ -898,7 +898,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE__URL = os.getenv("DATABASE__URL")
 API_KEY = os.getenv("TUSHARE_TOKEN")
 SECRET_KEY = os.getenv("SECRET_KEY")
 
@@ -906,7 +906,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # ✅ DO: Validate required secrets at startup
 def validate_config():
     """Validate all required environment variables are set."""
-    required_vars = ["DATABASE_URL", "TUSHARE_TOKEN", "SECRET_KEY"]
+    required_vars = ["DATABASE__URL", "TUSHARE_TOKEN", "SECRET_KEY"]
     missing = [var for var in required_vars if not os.getenv(var)]
 
     if missing:

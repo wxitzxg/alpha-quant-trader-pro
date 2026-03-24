@@ -68,7 +68,7 @@ database:
   url: "postgresql://localhost/dev_db"
 
 # .env
-DATABASE_URL="postgresql://localhost/prod_db"
+DATABASE__URL="postgresql://localhost/prod_db"
 
 # 代码中
 from common.config import get_config
@@ -99,14 +99,14 @@ BACKTEST__INITIAL_CAPITAL=100000
 | 变量 | 说明 | 示例 |
 |------|------|------|
 | `APP_ENV` | 运行环境 | `development` / `testing` / `production` |
-| `DATABASE_URL` | 数据库连接字符串 | `postgresql://user:pass@localhost:5432/stock_market` |
+| `DATABASE__URL` | 数据库连接字符串 | `postgresql://user:pass@localhost:5432/stock_market` |
 
 ### 可选环境变量
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `DEBUG` | `false` | 调试模式 |
-| `REDIS_URL` | `null` | Redis 连接字符串 |
+| `REDIS__URL` | `null` | Redis 连接字符串 |
 | `LOG_LEVEL` | `INFO` | 日志级别 |
 | `TZ` | `Asia/Shanghai` | 时区设置 |
 | `API_SERVER__API_KEY_SECRET` | - | API 密钥密钥 |
@@ -123,8 +123,8 @@ cp .env.example .env
 # .env
 APP_ENV=development
 DEBUG=true
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/stock_market
-REDIS_URL=redis://localhost:6379/0
+DATABASE__URL=postgresql://postgres:postgres@localhost:5432/stock_market
+REDIS__URL=redis://localhost:6379/0
 LOG_LEVEL=DEBUG
 ```
 
