@@ -4,6 +4,9 @@ FROM python:3.11-slim as builder
 # 设置工作目录
 WORKDIR /app
 
+# 配置 pip 阿里镜像源
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
+
 # 复制依赖文件
 COPY requirements.txt .
 
