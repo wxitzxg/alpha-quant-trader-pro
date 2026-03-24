@@ -8,12 +8,13 @@
 
 1. [Overview](#overview)
 2. [Portfolio Dashboard](#portfolio-dashboard)
-3. [Position Analysis](#position-analysis)
-4. [Asset Allocation](#asset-allocation)
-5. [Risk Management](#risk-management)
-6. [Performance Tracking](#performance-tracking)
-7. [Portfolio Optimization](#portfolio-optimization)
-8. [Best Practices](#best-practices)
+3. [同步持仓](#同步持仓)
+4. [Position Analysis](#position-analysis)
+5. [Asset Allocation](#asset-allocation)
+6. [Risk Management](#risk-management)
+7. [Performance Tracking](#performance-tracking)
+8. [Portfolio Optimization](#portfolio-optimization)
+9. [Best Practices](#best-practices)
 
 ---
 
@@ -76,6 +77,48 @@ for pos in dashboard['positions']:
     print(f"  Current Price: {pos['current_price']:.2f} RMB")
     print(f"  Market Value: {pos['market_value']:,.2f} RMB")
     print(f"  Unrealized P&L: {pos['unrealized_pnl']:,.2f} RMB ({pos['unrealized_pnl_pct']:.2f}%)")
+```
+
+---
+
+## 🔄 同步持仓
+
+### 智能同步
+
+```python
+# 自动判断：存在则覆盖，不存在则新增
+portfolio.sync_position(
+    symbol="600519",
+    quantity=100,
+    cost_price=1600.0
+)
+
+# 可选：手动指定现价
+portfolio.sync_position(
+    symbol="600519",
+    quantity=100,
+    cost_price=1600.0,
+    current_price=1650.0
+)
+```
+
+**特点**:
+- ✅ 无需判断持仓是否存在
+- ✅ 现价未提供时自动查询
+- ✅ 自动计算市值、盈亏等指标
+
+### 迁移指南
+
+**旧代码**:
+```python
+portfolio.add_position("600519", 100, 1600)
+portfolio.update_position("600519", quantity=150)
+```
+
+**新代码**:
+```python
+portfolio.sync_position("600519", 100, 1600)
+portfolio.sync_position("600519", 150, 1550)
 ```
 
 ---
