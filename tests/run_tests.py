@@ -177,8 +177,8 @@ def check_all_services_healthy():
 def setup_test_environment_vars():
     """设置测试环境变量"""
     env_vars = {
-        "DATABASE_URL": "postgresql://postgres:postgres_test@localhost:5433/test_stock_market",
-        "REDIS_URL": "redis://localhost:6380/0",
+        "DATABASE__URL": "postgresql://postgres:postgres_test@localhost:5433/test_stock_market",
+        "REDIS__URL": "redis://localhost:6380/0",
         "MOCK_API_URL": "http://localhost:9000",
         "USE_MOCK_API": "true",
         "APP_ENV": "testing",

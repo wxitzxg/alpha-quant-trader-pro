@@ -46,7 +46,7 @@
 
 2. **Verify connection string** in `.env`:
    ```bash
-   DATABASE_URL=postgresql://user:password@localhost:5432/stock_market
+   DATABASE__URL=postgresql://user:password@localhost:5432/stock_market
    ```
 
 3. **Test database connection**:

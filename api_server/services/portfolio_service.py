@@ -36,7 +36,7 @@ class PortfolioService:
         Args:
             db_url: 数据库连接字符串
         """
-        self.db_url = db_url or os.getenv("DATABASE_URL", "postgresql://localhost/stock_market")
+        self.db_url = db_url or os.getenv("DATABASE__URL", "postgresql://localhost/stock_market")
         self.db_manager = DatabaseManager(self.db_url)
 
     def _get_services(self):

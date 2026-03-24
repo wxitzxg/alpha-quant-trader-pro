@@ -15,9 +15,9 @@ def db_manager():
 
     每个测试函数独立的数据库管理器，确保测试隔离
     """
-    db_url = os.getenv("DATABASE_URL")
+    db_url = os.getenv("DATABASE__URL")
     if not db_url:
-        pytest.skip("DATABASE_URL environment variable not set")
+        pytest.skip("DATABASE__URL environment variable not set")
 
     manager = DatabaseManager(db_url)
 
@@ -43,7 +43,7 @@ def test_db_manager_initialization(db_manager):
 
 def test_db_manager_custom_pool_size():
     """测试自定义连接池配置"""
-    db_url = os.getenv("DATABASE_URL", "postgresql://test:test@localhost:5432/test_db")
+    db_url = os.getenv("DATABASE__URL", "postgresql://test:test@localhost:5432/test_db")
     manager = DatabaseManager(db_url, pool_size=5, max_overflow=10)
 
     assert manager.pool_size == 5

@@ -92,7 +92,7 @@ ON CONFLICT (symbol, date) DO UPDATE SET
 ```python
 # SQLAlchemy connection pool configuration
 engine = create_engine(
-    DATABASE_URL,
+    DATABASE__URL,
     pool_size=20,
     max_overflow=40,
     pool_timeout=30,
@@ -109,7 +109,7 @@ engine = create_engine(
 from sqlalchemy.ext.asyncio import create_async_engine
 
 async_engine = create_async_engine(
-    DATABASE_URL,
+    DATABASE__URL,
     pool_size=20,
     max_overflow=40
 )

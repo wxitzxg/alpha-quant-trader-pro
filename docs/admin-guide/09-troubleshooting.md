@@ -27,7 +27,7 @@ sudo netstat -tlnp | grep 5432
 sudo -u postgres psql -l | grep stock_market
 
 # Check connection string in .env
-echo $DATABASE_URL
+echo $DATABASE__URL
 
 # Test connection manually
 psql -U alphaquant -d stock_market -c "SELECT 1;"
@@ -203,7 +203,7 @@ export DATA_SOURCE_FALLBACK=akshare
 from stock_market.services import KLineService
 from common.database import DatabaseManager
 
-db = DatabaseManager(os.getenv('DATABASE_URL'))
+db = DatabaseManager(os.getenv('DATABASE__URL'))
 kline_service = KLineService(db.get_session())
 
 # Sync specific stock and date range

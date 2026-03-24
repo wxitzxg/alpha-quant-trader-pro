@@ -209,7 +209,7 @@ nano .env  # or use your preferred editor
 **Minimal required configuration:**
 ```bash
 # Database
-DATABASE_URL=postgresql://alphaquant:alphaquant@localhost:5432/stock_market
+DATABASE__URL=postgresql://alphaquant:alphaquant@localhost:5432/stock_market
 
 # Tushare
 TUSHARE_TOKEN=your_token_here
@@ -221,7 +221,7 @@ LOG_LEVEL=DEBUG
 SECRET_KEY=your_generated_secret_key_here
 
 # Redis (optional)
-REDIS_URL=redis://localhost:6379/0
+REDIS__URL=redis://localhost:6379/0
 REDIS_ENABLED=false
 ```
 
@@ -458,7 +458,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: alphaquant-app
     environment:
-      DATABASE_URL: postgresql://alphaquant:alphaquant@db:5432/stock_market
+      DATABASE__URL: postgresql://alphaquant:alphaquant@db:5432/stock_market
       TUSHARE_TOKEN: ${TUSHARE_TOKEN}
       ENVIRONMENT: development
       DEBUG: "true"
@@ -660,7 +660,7 @@ sudo systemctl start postgresql
 psql -U postgres -c "\l"
 
 # Check connection string in .env
-grep DATABASE_URL .env
+grep DATABASE__URL .env
 
 # Test connection manually
 psql -U alphaquant -d stock_market -h localhost

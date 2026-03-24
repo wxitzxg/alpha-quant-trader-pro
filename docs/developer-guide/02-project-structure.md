@@ -433,7 +433,7 @@ addopts = "-v --cov=."
 
 ```bash
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/stock_market
+DATABASE__URL=postgresql://user:password@localhost:5432/stock_market
 
 # Tushare
 TUSHARE_TOKEN=your_token_here
@@ -444,7 +444,7 @@ DEBUG=true
 LOG_LEVEL=DEBUG
 
 # Redis (optional)
-REDIS_URL=redis://localhost:6379/0
+REDIS__URL=redis://localhost:6379/0
 ```
 
 ### JSON Configuration (`config/production.json`)

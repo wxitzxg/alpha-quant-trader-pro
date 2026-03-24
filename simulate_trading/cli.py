@@ -40,7 +40,7 @@ def init_database():
     """初始化数据库"""
     # 从环境变量获取数据库URL，或使用默认值
     import os
-    db_url = os.environ.get('DATABASE_URL', 'postgresql://localhost/stock_market')
+    db_url = os.environ.get('DATABASE__URL', 'postgresql://localhost/stock_market')
 
     engine = create_engine(db_url, echo=False)
 

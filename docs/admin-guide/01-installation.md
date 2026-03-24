@@ -239,7 +239,7 @@ nano .env.production
 
 ```bash
 # Database Configuration
-DATABASE_URL=postgresql://alphaquant:your_secure_password@localhost:5432/stock_market
+DATABASE__URL=postgresql://alphaquant:your_secure_password@localhost:5432/stock_market
 
 # Tushare Configuration
 TUSHARE_TOKEN=your_tushare_token_here
@@ -256,7 +256,7 @@ SECRET_KEY=generate_using_python_secrets_module
 ALLOWED_HOSTS=localhost,yourdomain.com
 
 # Redis Configuration (optional)
-REDIS_URL=redis://localhost:6379/0
+REDIS__URL=redis://localhost:6379/0
 REDIS_ENABLED=true
 
 # API Configuration
@@ -373,7 +373,7 @@ User=alphaquant
 Group=alphaquant
 WorkingDirectory=/opt/alpha-quant
 Environment="PATH=/opt/alpha-quant/venv/bin"
-Environment="DATABASE_URL=postgresql://alphaquant:your_password@localhost:5432/stock_market"
+Environment="DATABASE__URL=postgresql://alphaquant:your_password@localhost:5432/stock_market"
 Environment="ENVIRONMENT=production"
 
 ExecStart=/opt/alpha-quant/venv/bin/gunicorn \
@@ -541,12 +541,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:5432/${POSTGRES_DB}
+      - DATABASE__URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${DB_HOST}:5432/${POSTGRES_DB}
       - TUSHARE_TOKEN=${TUSHARE_TOKEN}
       - ENVIRONMENT=${ENVIRONMENT}
       - DEBUG=${DEBUG}
       - LOG_LEVEL=${LOG_LEVEL}
-      - REDIS_URL=redis://${REDIS_HOST}:${REDIS_PORT}/0
+      - REDIS__URL=redis://${REDIS_HOST}:${REDIS_PORT}/0
       - SECRET_KEY=${SECRET_KEY}
     depends_on:
       - db

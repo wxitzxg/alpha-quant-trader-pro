@@ -169,7 +169,7 @@ nano .env.production
 **Required Configuration**:
 ```bash
 # Database
-DATABASE_URL=postgresql://alphaquant:secure_password@localhost:5432/stock_market
+DATABASE__URL=postgresql://alphaquant:secure_password@localhost:5432/stock_market
 
 # Tushare
 TUSHARE_TOKEN=your_production_token_here
@@ -180,7 +180,7 @@ LOG_LEVEL=INFO
 DEBUG=false
 
 # Redis (optional)
-REDIS_URL=redis://localhost:6379/0
+REDIS__URL=redis://localhost:6379/0
 
 # Security
 SECRET_KEY=your_very_secure_random_string_here
@@ -242,7 +242,7 @@ Create `config/production.json`:
 ### Environment Variables Priority
 
 The system uses the following priority (highest to lowest):
-1. **Environment Variables** (e.g., `DATABASE_URL`)
+1. **Environment Variables** (e.g., `DATABASE__URL`)
 2. **Configuration File** (e.g., `config/production.json`)
 3. **Default Values** (hardcoded defaults)
 
@@ -427,7 +427,7 @@ User=alphaquant
 Group=alphaquant
 WorkingDirectory=/opt/alpha-quant
 Environment="PATH=/opt/alpha-quant/venv/bin"
-Environment="DATABASE_URL=postgresql://alphaquant:password@localhost:5432/stock_market"
+Environment="DATABASE__URL=postgresql://alphaquant:password@localhost:5432/stock_market"
 Environment="ENVIRONMENT=production"
 
 ExecStart=/opt/alpha-quant/venv/bin/gunicorn \
@@ -492,10 +492,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://alphaquant:${DB_PASSWORD}@db:5432/stock_market
+      - DATABASE__URL=postgresql://alphaquant:${DB_PASSWORD}@db:5432/stock_market
       - TUSHARE_TOKEN=${TUSHARE_TOKEN}
       - ENVIRONMENT=production
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS__URL=redis://redis:6379/0
     depends_on:
       - db
       - redis

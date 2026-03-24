@@ -15,8 +15,8 @@ fi
 # 检查环境变量
 source .env
 
-if [ -z "$DATABASE_URL" ]; then
-    echo "❌ DATABASE_URL is not set in .env"
+if [ -z "$DATABASE__URL" ]; then
+    echo "❌ DATABASE__URL is not set in .env"
     exit 1
 fi
 
