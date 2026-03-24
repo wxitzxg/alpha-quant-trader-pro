@@ -102,36 +102,37 @@ def test_session_auto_rollback_on_error(db_manager):
     """测试 session 异常时自动回滚"""
     from sqlalchemy import Column, Integer, String
 
-    # 定义临时测试模型
-    class TestUser(Base):
+    # 定义临时测试模型（使用唯一类名避免冲突）
+    class TestUserRollback(Base):
         __tablename__ = 'test_users_rollback'
         id = Column(Integer, primary_key=True)
         username = Column(String(50))
 
     # 创建测试表
-    TestUser.__table__.create(db_manager.engine)
+    TestUserRollback.__table__.create(db_manager.engine)
 
     try:
         original_count = 0
         with db_manager.get_session() as session:
-            original_count = session.query(TestUser).count()
+            original_count = session.query(TestUserRollback).count()
 
         try:
             with db_manager.get_session() as session:
-                user = TestUser(username="rollback_test")
+                user = TestUserRollback(username="rollback_test")
                 session.add(user)
                 # 模拟异常
                 raise ValueError("模拟异常")
-        except ValueError:
+        except DatabaseError:
+            # DatabaseManager.get_session() 会包装异常为 DatabaseError
             pass
 
         # 验证数据未提交
         with db_manager.get_session() as session:
-            count_after = session.query(TestUser).count()
+            count_after = session.query(TestUserRollback).count()
             assert count_after == original_count
     finally:
         # 清理测试表
-        TestUser.__table__.drop(db_manager.engine)
+        TestUserRollback.__table__.drop(db_manager.engine)
 
 
 def test_database_error_handling(db_manager):
