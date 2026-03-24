@@ -291,6 +291,60 @@ class PortfolioService:
                 "message": f"Failed to update position: {str(e)}"
             }
 
+    def sync_position(
+        self,
+        symbol: str,
+        quantity: int,
+        cost_price: float,
+        current_price: Optional[float] = None
+    ) -> Dict:
+        """
+        同步持仓信息（存在则覆盖，不存在则新增）
+
+        Args:
+            symbol: 股票代码（必填）
+            quantity: 持仓数量（必填）
+            cost_price: 成本价（必填）
+            current_price: 当前价格（可选）
+
+        Returns:
+            {
+                "success": bool,
+                "data": PositionInfo | None,
+                "message": str
+            }
+        """
+        try:
+            _, position_service, _, _, _ = self._get_services()
+
+            position = position_service.sync_position(
+                symbol=symbol,
+                quantity=quantity,
+                cost_price=cost_price,
+                current_price=current_price
+            )
+
+            return {
+                "success": True,
+                "data": {
+                    "symbol": position.symbol,
+                    "quantity": position.quantity,
+                    "cost_price": position.cost_price,
+                    "current_price": position.current_price,
+                    "market_value": position.market_value,
+                    "cost_value": position.cost_value,
+                    "floating_pl": position.floating_pl,
+                    "last_updated": position.last_updated.isoformat()
+                },
+                "message": f"Position {symbol} synced successfully"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to sync position: {str(e)}"
+            }
+
     def record_buy(
         self,
         symbol: str,
