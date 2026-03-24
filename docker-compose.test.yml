@@ -38,7 +38,7 @@ services:
   mock-api:
     build:
       context: .
-      dockerfile: tests/Dockerfile.mock
+      dockerfile: Dockerfile.mock
     container_name: alpha-quant-mock-api
     ports:
       - "9000:9000"
@@ -50,7 +50,7 @@ services:
   api-server-test:
     build:
       context: .
-      dockerfile: tests/Dockerfile.test
+      dockerfile: Dockerfile.test
     container_name: alpha-quant-api-test
     ports:
       - "8001:8000"

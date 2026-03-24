@@ -1,162 +1,255 @@
-"""
-Mock API Server for external dependencies
-模拟外部 API 服务，用于测试
+#!/usr/bin/env python3
+"""Mock API Server - 用于模拟外部 API 服务
 
-支持的 Mock 端点:
-- /tushare/stock/basic - Tushare 基础数据
-- /tushare/stock/kline - Tushare K线数据
-- /investoday/stock/quote - Investoday 行情
-- /investoday/stock/kline - Investoday K线
-- /health - 健康检查
+提供统一的 Mock 接口，模拟 Tushare、Investoday 等外部数据源
 """
-from flask import Flask, jsonify, request
-import logging
+
+import json
 from datetime import datetime, timedelta
+from typing import Dict, Any
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
-app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Mock 数据
-MOCK_STOCK_DATA = {
-    "600519": {
-        "ts_code": "600519.SH",
-        "name": "贵州茅台",
-        "price": 1850.0,
-        "open": 1840.0,
-        "high": 1860.0,
-        "low": 1835.0,
-        "close": 1850.0,
-        "volume": 10000,
-        "amount": 185000000,
-        "change_pct": 1.5,
-        "turnover_rate": 0.5
-    },
-    "000001": {
-        "ts_code": "000001.SZ",
-        "name": "平安银行",
-        "price": 15.5,
-        "open": 15.3,
-        "high": 15.7,
-        "low": 15.2,
-        "close": 15.5,
-        "volume": 500000,
-        "amount": 7750000,
-        "change_pct": 1.2,
-        "turnover_rate": 0.3
-    }
-}
-
-MOCK_KLINE_DATA = {
-    "600519": [
-        {
-            "trade_date": (datetime.now() - timedelta(days=i)).strftime("%Y%m%d"),
-            "open": 1840.0 + i * 0.5,
-            "high": 1860.0 + i * 0.5,
-            "low": 1835.0 + i * 0.5,
-            "close": 1850.0 + i * 0.5,
-            "volume": 10000 + i * 100,
-            "amount": 185000000 + i * 1000000
-        }
-        for i in range(30)
-    ]
-}
+app = FastAPI(title="Mock API Server", version="1.0.0")
 
 
-@app.route('/tushare/stock/basic', methods=['GET'])
-def mock_tushare_basic():
-    """Mock Tushare 基础数据接口"""
-    ts_code = request.args.get('ts_code')
-    logger.info(f"Mock Tushare request: ts_code={ts_code}")
-
-    # 提取股票代码（去掉后缀）
-    stock_code = ts_code.split('.')[0] if ts_code else "600519"
-
-    if stock_code in MOCK_STOCK_DATA:
-        return jsonify({
-            "code": 0,
-            "msg": "success",
-            "data": MOCK_STOCK_DATA[stock_code]
-        })
-    return jsonify({"code": -1, "msg": "stock not found"}), 404
+class MockResponse(BaseModel):
+    """统一的 Mock 响应格式"""
+    code: int = 200
+    msg: str = "success"
+    data: Any = None
 
 
-@app.route('/tushare/stock/kline', methods=['GET'])
-def mock_tushare_kline():
-    """Mock Tushare K线数据接口"""
-    ts_code = request.args.get('ts_code')
-    logger.info(f"Mock Tushare kline request: ts_code={ts_code}")
+# ==================== 模拟股票数据 ====================
 
-    stock_code = ts_code.split('.')[0] if ts_code else "600519"
-
-    if stock_code in MOCK_KLINE_DATA:
-        return jsonify({
-            "code": 0,
-            "msg": "success",
-            "data": MOCK_KLINE_DATA[stock_code]
-        })
-    return jsonify({"code": -1, "msg": "kline data not found"}), 404
-
-
-@app.route('/investoday/stock/quote', methods=['GET'])
-def mock_investoday_quote():
-    """Mock Investoday 行情接口"""
-    symbol = request.args.get('symbol')
-    logger.info(f"Mock Investoday quote request: symbol={symbol}")
-
-    stock_code = symbol if symbol else "600519"
-
-    if stock_code in MOCK_STOCK_DATA:
-        return jsonify({
-            "status": "success",
-            "code": 200,
-            "data": MOCK_STOCK_DATA[stock_code]
-        })
-    return jsonify({"status": "error", "code": 404, "message": "stock not found"}), 404
-
-
-@app.route('/investoday/stock/kline', methods=['GET'])
-def mock_investoday_kline():
-    """Mock Investoday K线接口"""
-    symbol = request.args.get('symbol')
-    logger.info(f"Mock Investoday kline request: symbol={symbol}")
-
-    stock_code = symbol if symbol else "600519"
-
-    if stock_code in MOCK_KLINE_DATA:
-        return jsonify({
-            "status": "success",
-            "code": 200,
-            "data": MOCK_KLINE_DATA[stock_code]
-        })
-    return jsonify({"status": "error", "code": 404, "message": "kline data not found"}), 404
-
-
-@app.route('/health', methods=['GET'])
-def health():
+@app.get("/health")
+async def health_check():
     """健康检查"""
-    return jsonify({
+    return {
         "status": "healthy",
-        "service": "mock-api-server",
+        "service": "mock-api",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/api/stock/{symbol}/quote")
+async def get_stock_quote(symbol: str):
+    """获取股票实时行情（模拟）"""
+    # 模拟一些热门股票的价格
+    stock_data = {
+        "600519": {
+            "symbol": "600519",
+            "name": "贵州茅台",
+            "price": 1850.0,
+            "change": 5.2,
+            "change_percent": 0.28,
+            "volume": 123456,
+            "amount": 2283936000,
+            "time": datetime.now().isoformat()
+        },
+        "000001": {
+            "symbol": "000001",
+            "name": "平安银行",
+            "price": 10.5,
+            "change": -0.2,
+            "change_percent": -1.87,
+            "volume": 45678900,
+            "amount": 479628450,
+            "time": datetime.now().isoformat()
+        },
+        "601318": {
+            "symbol": "601318",
+            "name": "中国平安",
+            "price": 45.8,
+            "change": 1.2,
+            "change_percent": 2.69,
+            "volume": 78912300,
+            "amount": 3614183340,
+            "time": datetime.now().isoformat()
+        }
+    }
+
+    if symbol not in stock_data:
+        return MockResponse(
+            code=404,
+            msg=f"股票 {symbol} 不存在",
+            data=None
+        )
+
+    return MockResponse(data=stock_data[symbol])
+
+
+@app.get("/api/stock/{symbol}/history")
+async def get_stock_history(symbol: str, days: int = 30):
+    """获取股票历史 K 线数据（模拟）"""
+    # 生成模拟的 K 线数据
+    history = []
+    base_price = 1850.0 if symbol == "600519" else 100.0
+    current_price = base_price
+
+    for i in range(days):
+        date = (datetime.now() - timedelta(days=days - i)).date().isoformat()
+        open_price = current_price * (0.99 + 0.02 * (i % 3))
+        close_price = current_price * (0.98 + 0.04 * (i % 5))
+        high_price = max(open_price, close_price) * 1.02
+        low_price = min(open_price, close_price) * 0.98
+        volume = 1000000 + (i * 10000)
+
+        history.append({
+            "date": date,
+            "open": round(open_price, 2),
+            "high": round(high_price, 2),
+            "low": round(low_price, 2),
+            "close": round(close_price, 2),
+            "volume": volume
+        })
+
+        # 更新价格用于下一天
+        current_price = close_price
+
+    return MockResponse(data={
+        "symbol": symbol,
+        "name": "贵州茅台" if symbol == "600519" else "模拟股票",
+        "history": history
+    })
+
+
+@app.get("/api/stock/{symbol}/indicator/macd")
+async def get_macd_indicator(symbol: str, days: int = 30):
+    """获取 MACD 指标数据（模拟）"""
+    # 生成模拟的 MACD 数据
+    macd_data = []
+    for i in range(days):
+        date = (datetime.now() - timedelta(days=days - i)).date().isoformat()
+        macd_data.append({
+            "date": date,
+            "dif": round(0.5 + 0.1 * i, 2),
+            "dea": round(0.4 + 0.08 * i, 2),
+            "macd": round(0.02 + 0.01 * i, 2)
+        })
+
+    return MockResponse(data={
+        "symbol": symbol,
+        "indicator": "MACD",
+        "data": macd_data
+    })
+
+
+# ==================== 模拟新闻数据 ====================
+
+@app.get("/api/news/list")
+async def get_news_list(category: str = "stock", page: int = 1, page_size: int = 10):
+    """获取新闻列表（模拟）"""
+    news_list = [
+        {
+            "id": f"news_{i}",
+            "title": f"【模拟】市场快讯 {i}",
+            "summary": f"这是第 {i} 条模拟新闻摘要",
+            "url": f"https://example.com/news/{i}",
+            "source": "模拟财经",
+            "publish_time": (datetime.now() - timedelta(hours=i)).isoformat(),
+            "category": category
+        }
+        for i in range((page - 1) * page_size, page * page_size)
+    ]
+
+    return MockResponse(data={
+        "list": news_list,
+        "total": 100,
+        "page": page,
+        "page_size": page_size
+    })
+
+
+@app.get("/api/news/{news_id}")
+async def get_news_detail(news_id: str):
+    """获取新闻详情（模拟）"""
+    return MockResponse(data={
+        "id": news_id,
+        "title": f"【模拟】{news_id} 详细新闻",
+        "content": "这是模拟的新闻正文内容...",
+        "publish_time": datetime.now().isoformat(),
+        "source": "模拟财经"
+    })
+
+
+# ==================== 模拟财务数据 ====================
+
+@app.get("/api/stock/{symbol}/financial")
+async def get_financial_data(symbol: str, year: int = 2023):
+    """获取财务数据（模拟）"""
+    return MockResponse(data={
+        "symbol": symbol,
+        "year": year,
+        "revenue": 1000000000,
+        "profit": 200000000,
+        "assets": 5000000000,
+        "liabilities": 2000000000,
+        "equity": 3000000000
+    })
+
+
+# ==================== 模拟资金流向 ====================
+
+@app.get("/api/stock/{symbol}/fundflow")
+async def get_fund_flow(symbol: str, days: int = 5):
+    """获取资金流向数据（模拟）"""
+    fundflow = []
+    for i in range(days):
+        date = (datetime.now() - timedelta(days=days - i)).date().isoformat()
+        fundflow.append({
+            "date": date,
+            "inflow": 10000000 + (i * 1000000),
+            "outflow": 8000000 + (i * 800000),
+            "net": 2000000 + (i * 200000)
+        })
+
+    return MockResponse(data={
+        "symbol": symbol,
+        "fundflow": fundflow
+    })
+
+
+# ==================== 错误处理 ====================
+
+@app.get("/api/error/{error_type}")
+async def simulate_error(error_type: str):
+    """模拟各种错误情况"""
+    error_responses = {
+        "404": {"code": 404, "msg": "Not Found", "data": None},
+        "400": {"code": 400, "msg": "Bad Request", "data": None},
+        "500": {"code": 500, "msg": "Internal Server Error", "data": None},
+        "timeout": {"code": 504, "msg": "Gateway Timeout", "data": None},
+        "rate_limit": {"code": 429, "msg": "Too Many Requests", "data": None}
+    }
+
+    if error_type not in error_responses:
+        raise HTTPException(status_code=400, detail="Invalid error type")
+
+    return JSONResponse(
+        status_code=error_responses[error_type]["code"],
+        content=error_responses[error_type]
+    )
+
+
+# ==================== 通用 Mock 接口 ====================
+
+@app.post("/api/mock/{endpoint}")
+async def generic_mock(endpoint: str, request: Dict[str, Any]):
+    """通用 Mock 接口 - 返回请求参数"""
+    return MockResponse(data={
+        "endpoint": endpoint,
+        "received": request,
         "timestamp": datetime.now().isoformat()
     })
 
 
-@app.route('/stats', methods=['GET'])
-def stats():
-    """统计信息"""
-    return jsonify({
-        "total_requests": 0,  # TODO: 实现请求计数
-        "mocked_stocks": list(MOCK_STOCK_DATA.keys()),
-        "available_endpoints": [
-            "/tushare/stock/basic",
-            "/tushare/stock/kline",
-            "/investoday/stock/quote",
-            "/investoday/stock/kline"
-        ]
-    })
-
-
-if __name__ == '__main__':
-    logger.info("Mock API Server starting on port 9000...")
-    app.run(host='0.0.0.0', port=9000, debug=True)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=9000,
+        log_level="info"
+    )

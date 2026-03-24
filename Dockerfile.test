@@ -3,6 +3,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# 配置 pip 阿里镜像源
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
+
 # 复制依赖文件
 COPY requirements.txt .
 COPY requirements.test.txt .
