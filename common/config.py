@@ -8,9 +8,9 @@ Configuration priority: runtime params > env vars > YAML > defaults
 import os
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Tuple, Type
 from pydantic import BaseModel, Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict, PydanticBaseSettingsSource
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -224,8 +224,13 @@ class Config(BaseSettings):
     统一配置类
     Unified configuration class
 
-    配置优先级：运行时参数 > 环境变量 > YAML配置 > 默认值
-    Configuration priority: runtime params > env vars > YAML > defaults
+    配置优先级（Pydantic 自动处理）：
+    Configuration priority (handled automatically by Pydantic):
+    1. 运行时参数 **kwargs (highest) / Runtime params **kwargs
+    2. 环境变量 / Environment variables
+    3. .env 文件 / .env file
+    4. YAML 配置 / YAML config (via YamlConfigSource)
+    5. 默认值 (lowest) / Defaults (lowest)
     """
 
     model_config = SettingsConfigDict(
@@ -254,149 +259,59 @@ class Config(BaseSettings):
     backtest: BacktestConfig = Field(default_factory=BacktestConfig, description="回测配置 / Backtest config")
     simulation: SimulationConfig = Field(default_factory=SimulationConfig, description="模拟交易配置 / Simulation config")
 
-    # 内部使用
-    _config_file: Optional[str] = None
-
-    def __init__(self, config_file: Optional[str] = None, **kwargs):
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
         """
-        初始化配置
-        Initialize configuration
+        自定义配置源的优先级顺序
+        Customize the order of configuration sources
+
+        返回的顺序决定了优先级（从高到低）：
+        Return order determines priority (highest to lowest):
+        """
+        return (
+            init_settings,        # 运行时参数 / Runtime params
+            env_settings,         # 环境变量 / Environment variables
+            dotenv_settings,      # .env 文件
+            YamlConfigSource(settings_cls),  # YAML 配置
+            file_secret_settings, # 密钥文件 / Secret files
+        )
+
+    def save_to_file(self, config_file: str):
+        """
+        保存配置到YAML文件
+        Save configuration to YAML file
 
         Args:
             config_file: 配置文件路径 / Config file path
-            **kwargs: 其他配置参数（运行时参数，优先级最高）/ Other config params (runtime, highest priority)
         """
-        # 确定配置文件路径
-        if config_file:
-            self._config_file = config_file
-        else:
-            env = os.getenv("APP_ENV", "development")
-            if env == "development":
-                self._config_file = "config/config.yaml"
-            else:
-                self._config_file = f"config/config.{env}.yaml"
+        config_path = Path(config_file)
+        config_dir = config_path.parent
 
-        # 加载YAML配置
-        yaml_config = self._load_yaml_config()
-
-        # 加载 data_sources.yaml 配置
-        data_sources_config = self._load_data_sources_config()
-        if data_sources_config:
-            # 合并数据源配置到 yaml_config
-            if 'data_sources' in yaml_config:
-                yaml_config['data_sources'].update(data_sources_config)
-            else:
-                yaml_config['data_sources'] = data_sources_config
-
-        # 合并配置：YAML配置 + 运行时参数
-        merged_config = {**yaml_config, **kwargs}
-
-        # 调用父类初始化
-        super().__init__(**merged_config)
-
-        logger.info(f"Configuration loaded from {self._config_file}")
-        logger.info(f"Environment: {self.environment}")
-        logger.info(f"Debug mode: {self.debug}")
-
-    def _load_yaml_config(self) -> Dict[str, Any]:
-        """加载YAML配置文件 / Load YAML config file"""
-        if not self._config_file:
-            return {}
-
-        config_path = Path(self._config_file)
-
-        if not config_path.exists():
-            logger.warning(f"Config file not found: {self._config_file}")
-            return {}
+        config_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f) or {}
+            config_dict = self.model_dump()
+            with open(config_file, 'w', encoding='utf-8') as f:
+                yaml.dump(config_dict, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            logger.info(f"Saved config to {config_file}")
         except Exception as e:
-            logger.error(f"Failed to load config file {self._config_file}: {e}")
+            logger.error(f"Failed to save config to {config_file}: {e}")
             raise
 
-    def _load_data_sources_config(self) -> Dict[str, Any]:
-        """加载数据源专用配置 / Load data sources specific configuration"""
-        config_path = Path("config/data_sources.yaml")
+    def get_database_url(self) -> str:
+        """获取数据库连接字符串 / Get database URL"""
+        return self.database.url
 
-        if not config_path.exists():
-            logger.warning("config/data_sources.yaml not found, using default configuration")
-            # 返回完整的默认配置
-            return self._get_default_data_sources_config()
-
-        try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                data = yaml.safe_load(f) or {}
-                # 提取 data_sources 内容，直接返回
-                return data.get('data_sources', {})
-        except Exception as e:
-            logger.error(f"Failed to load data_sources.yaml: {e}")
-            # 加载失败时返回默认配置
-            return self._get_default_data_sources_config()
-
-    def _get_default_data_sources_config(self) -> Dict[str, Any]:
-        """获取默认的数据源配置 / Get default data sources configuration"""
-        return {
-            "timeout": 10,
-            "max_retries": 3,
-            "retry_delay": 0.5,
-            "log_failures": True,
-            "sources": {
-                "realtime": [
-                    {"name": "sina", "priority": 10, "enabled": True, "timeout": 3},
-                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 5},
-                    {"name": "tushare", "priority": 30, "enabled": True, "timeout": 5}
-                ],
-                "kline": [
-                    {"name": "tushare", "priority": 10, "enabled": True, "timeout": 10},
-                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 10},
-                    {"name": "sina", "priority": 30, "enabled": True, "timeout": 5}
-                ],
-                "fundamentals": [
-                    {"name": "tushare", "priority": 10, "enabled": True, "timeout": 15},
-                    {"name": "akshare", "priority": 20, "enabled": True, "timeout": 15}
-                ],
-                "tech_indicators": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
-                ],
-                "fund_flows": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
-                ],
-                "dragon_tiger": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
-                ],
-                "valuation": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
-                ],
-                "per_share_indicators": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
-                ],
-                "osc_indicators": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
-                ],
-                "price_vol_ind": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
-                ],
-                "limit_up_down": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
-                ],
-                "turnover_rates": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
-                ],
-                "fund_quotes": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 10}
-                ],
-                "dupont_analysis": [
-                    {"name": "akshare", "priority": 10, "enabled": True, "timeout": 15}
-                ]
-            },
-            "fallback": {
-                "max_retries": 2,
-                "retry_delay": 0.5,
-                "log_failures": True
-            }
-        }
+    def get_fee_config(self) -> FeeConfig:
+        """获取手续费配置 / Get fee configuration"""
+        return self.fee
 
     def save_to_file(self, config_file: str):
         """
@@ -429,7 +344,74 @@ class Config(BaseSettings):
         return self.fee
 
 
-# ========== 配置管理器（单例模式） ==========
+# ========== 自定义 SettingsSource ==========
+
+class YamlConfigSource(PydanticBaseSettingsSource):
+    """
+    YAML 配置源 - 在环境变量之前加载
+    YAML configuration source - loads before environment variables
+
+    优先级位置：
+    Priority position:
+    1. init_settings (运行时参数) - highest
+    2. env_settings (环境变量)
+    3. dotenv_settings (.env 文件)
+    4. yaml_config_settings (YAML 配置) ← 本类
+    5. 默认值 - lowest
+    """
+
+    def __init__(self, settings_cls: type[BaseSettings]):
+        super().__init__(settings_cls)
+        self._yaml_config: Dict[str, Any] = {}
+        self._load_yaml_configs()
+
+    def _load_yaml_configs(self):
+        """加载并合并所有 YAML 配置文件"""
+        config_dir = Path("config")
+        if not config_dir.exists():
+            logger.warning("Config directory not found")
+            return
+
+        merged_config: Dict[str, Any] = {}
+        yaml_files = sorted(config_dir.glob("*.yaml"))
+
+        for yaml_file in yaml_files:
+            if yaml_file.name.endswith('.example.yaml'):
+                continue
+
+            try:
+                with open(yaml_file, 'r', encoding='utf-8') as f:
+                    config_data = yaml.safe_load(f) or {}
+                    self._deep_merge(merged_config, config_data)
+                logger.info(f"Loaded config from {yaml_file.name}")
+            except Exception as e:
+                logger.error(f"Failed to load {yaml_file.name}: {e}")
+                raise
+
+        self._yaml_config = merged_config
+
+    def _deep_merge(self, target: Dict[str, Any], source: Dict[str, Any]) -> None:
+        """深度合并两个字典"""
+        for key, value in source.items():
+            if key in target:
+                if isinstance(target[key], dict) and isinstance(value, dict):
+                    self._deep_merge(target[key], value)
+                else:
+                    target[key] = value
+            else:
+                target[key] = value
+
+    def get_field_value(self, field, field_name: str):
+        """获取字段值（Pydantic 接口）"""
+        value = self._yaml_config.get(field_name)
+        return value, field_name, False
+
+    def __call__(self) -> Dict[str, Any]:
+        """返回 YAML 配置字典"""
+        return self._yaml_config
+
+
+# ========== 主配置类 ==========
 
 class ConfigManager:
     """配置管理器 / Configuration manager"""
