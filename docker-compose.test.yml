@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 测试数据库
   test-db:
