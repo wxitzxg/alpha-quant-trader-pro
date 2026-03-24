@@ -62,10 +62,6 @@ services:
       - INVESTODAY_API_KEY=${INVESTODAY_API_KEY:-mock_key}
       - API_SERVER__HOST=0.0.0.0
       - API_SERVER__PORT=8000
-      - API_SERVER__API_KEY_SECRET=test_secret_key_123456
-      - API_SERVER__RATE_LIMIT_FREE=1000
-      - API_SERVER__RATE_LIMIT_STANDARD=10000
-      - API_SERVER__RATE_LIMIT_PREMIUM=100000
       - USE_MOCK_API=${USE_MOCK_API:-true}
       - MOCK_API_URL=http://mock-api:9000
     depends_on:

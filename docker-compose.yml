@@ -10,7 +10,6 @@ services:
       - DEBUG=${DEBUG:-False}
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
-      - API_KEY_SECRET=${API_KEY_SECRET}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     depends_on:
       - db
