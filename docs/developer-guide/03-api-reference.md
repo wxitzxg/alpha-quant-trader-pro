@@ -411,6 +411,57 @@ Response (200 OK):
 }
 ```
 
+#### POST /portfolio/positions/sync
+
+**Description**: 同步持仓信息（存在则覆盖，不存在则新增）
+
+**Request Body**:
+```json
+{
+  "stock_code": "600519",
+  "quantity": 100,
+  "cost_price": 1600.0,
+  "current_price": 1650.0  // Optional
+}
+```
+
+**Required Fields**:
+- `stock_code` (string): 股票代码
+- `quantity` (integer): 持仓数量 (> 0)
+- `cost_price` (float): 成本价
+
+**Optional Fields**:
+- `current_price` (float): 当前价格（未提供时自动查询）
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "symbol": "600519",
+    "quantity": 100,
+    "cost_price": 1600.0,
+    "current_price": 1650.0,
+    "market_value": 165000.0,
+    "cost_value": 160000.0,
+    "floating_pl": 5000.0,
+    "last_updated": "2026-03-24T10:30:00"
+  },
+  "message": "Position 600519 synced successfully"
+}
+```
+
+**Example**:
+```bash
+curl -X POST "http://localhost:8000/portfolio/positions/sync" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stock_code": "600519",
+    "quantity": 100,
+    "cost_price": 1600.0
+  }'
+```
+
 #### Get Transactions
 
 ```bash
