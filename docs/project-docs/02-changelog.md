@@ -4,6 +4,20 @@
 
 ---
 
+## [Unreleased]
+
+### Added
+- `sync_position()` 方法：智能同步持仓（存在则覆盖，不存在则新增）
+- `POST /portfolio/positions/sync` API 端点
+- 自动查询现价功能（可选）
+- 完整的单元测试和集成测试
+
+### Deprecated
+- `add_position()` 方法（使用 `sync_position()` 替代）
+- `update_position()` 方法（使用 `sync_position()` 替代）
+- `POST /portfolio/positions/add` API 端点（使用 `sync` 替代）
+- `PUT /portfolio/positions/{stock_code}` API 端点（使用 `sync` 替代）
+
 ## Version 2.0.0 (2026-03-18)
 
 ### 🎉 Major Features
