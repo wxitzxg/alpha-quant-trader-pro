@@ -3,9 +3,8 @@
 """
 
 from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, Date, func, UniqueConstraint, Index
-from sqlalchemy.ext.declarative import declarative_base
+from common.database import Base
 
-Base = declarative_base()
 
 class DailyReport(Base):
     """每日报告表 - 存储每种策略的每日交易报告"""

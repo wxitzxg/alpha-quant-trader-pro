@@ -3,9 +3,8 @@
 """
 
 from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, func, Index
-from sqlalchemy.ext.declarative import declarative_base
+from common.database import Base
 
-Base = declarative_base()
 
 class StrategyTrade(Base):
     """策略交易记录表 - 存储每种策略的交易历史"""
