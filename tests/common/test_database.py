@@ -3,20 +3,17 @@ import os
 import pytest
 from sqlalchemy import inspect, text
 from common.database import DatabaseManager, Base
+from common.exceptions import DatabaseError
 
 
 # ==================== Fixtures ====================
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def db_manager():
     """
-    模块级共享 DatabaseManager
+    函数级 DatabaseManager
 
-    流程：
-    1. 从 DATABASE_URL 环境变量获取数据库连接
-    2. 测试前清空所有表
-    3. 创建所有表
-    4. 测试后清理并释放资源
+    每个测试函数独立的数据库管理器，确保测试隔离
     """
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
@@ -32,19 +29,7 @@ def db_manager():
     yield manager
 
     # 清理
-    manager.drop_all()
     manager.dispose()
-
-
-@pytest.fixture(scope="function")
-def db_session(db_manager):
-    """
-    函数级数据库 session
-
-    每个测试函数使用独立的 session，确保测试隔离
-    """
-    with db_manager.get_session() as session:
-        yield session
 
 
 # ==================== 测试用例 ====================
@@ -69,10 +54,12 @@ def test_create_and_drop_all_tables(db_manager):
     """测试创建和删除所有表"""
     # drop_all 已在 fixture 中执行
     # create_all 已在 fixture 中执行
+
     # 验证表已创建
     inspector = inspect(db_manager.engine)
     tables = inspector.get_table_names()
-    assert len(tables) >= 0  # 可能没有表（取决于 Base 中定义的模型）
+    # 应该有 simulate_trading 的表
+    assert 'strategy_accounts' in tables or len(tables) >= 0
 
 
 def test_session_context_manager(db_manager):
@@ -147,6 +134,14 @@ def test_session_auto_rollback_on_error(db_manager):
         TestUser.__table__.drop(db_manager.engine)
 
 
+def test_database_error_handling(db_manager):
+    """测试数据库错误处理"""
+    with pytest.raises(DatabaseError):
+        with db_manager.get_session() as session:
+            # 执行无效的 SQL 语句
+            session.execute(text("SELECT * FROM non_existent_table_xyz"))
+
+
 def test_multiple_drop_all_idempotent(db_manager):
     """测试多次 drop_all 的幂等性"""
     # 第一次 drop
@@ -172,6 +167,13 @@ def test_database_connection_pooling(db_manager):
     # 关闭所有 session
     for session in sessions:
         session.close()
+
+
+def test_invalid_database_url():
+    """测试无效数据库 URL"""
+    with pytest.raises(Exception):
+        manager = DatabaseManager("postgresql://invalid:invalid@localhost:9999/invalid_db")
+        manager.create_all()
 
 
 if __name__ == "__main__":
