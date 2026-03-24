@@ -3,9 +3,8 @@
 """
 
 from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, func, Index
-from sqlalchemy.ext.declarative import declarative_base
+from common.database import Base
 
-Base = declarative_base()
 
 class StrategyAccount(Base):
     """策略账户表 - 存储每种策略的账户资金信息"""
