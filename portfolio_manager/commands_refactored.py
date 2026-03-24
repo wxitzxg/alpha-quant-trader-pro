@@ -165,6 +165,21 @@ class PortfolioCommands:
         with self._with_services() as (position_service, _, _):
             return position_service.update_position(symbol, quantity, cost_price)
 
+    def sync_position(self, symbol: str, quantity: int, cost_price: float) -> PositionModel:
+        """
+        同步持仓信息（存在则覆盖，不存在则新增）
+
+        Args:
+            symbol: 股票代码
+            quantity: 持仓数量
+            cost_price: 成本价（支持负数）
+
+        Returns:
+            PositionModel
+        """
+        with self._with_services() as (position_service, _, _):
+            return position_service.sync_position(symbol, quantity, cost_price)
+
     def get_position(self, symbol: str) -> Optional[PositionModel]:
         """
         获取单只持仓股

@@ -5,7 +5,7 @@ import pytest
 import json
 import tempfile
 from pathlib import Path
-from portfolio_manager.config import PortfolioConfig
+from common.config import Config as PortfolioConfig
 
 
 def test_config_default():

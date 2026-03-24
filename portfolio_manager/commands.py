@@ -84,10 +84,18 @@ class PortfolioCommands:
 
         # 初始化服务（直接从统一配置获取手续费配置）
         self.fee_calculator = FeeCalculator(self.config.get_fee_config())
-        self.position_service = PositionService(self.db, self.data_source)
-        self.account_service = AccountService(self.db, self.position_service)
+
+        # Initialize repositories
+        from portfolio_manager.repositories import PositionRepository, TransactionRepository, CashBalanceRepository
+        position_repo = PositionRepository(self.db)
+        transaction_repo = TransactionRepository(self.db)
+        cash_repo = CashBalanceRepository(self.db)
+
+        self.position_service = PositionService(position_repo, self.data_source)
+        self.account_service = AccountService(cash_repo, self.position_service)
         self.transaction_service = TransactionService(
-            self.db,
+            transaction_repo,
+            position_repo,
             self.position_service,
             self.account_service,
             self.fee_calculator
@@ -158,6 +166,20 @@ class PortfolioCommands:
             PositionModel
         """
         return self.position_service.update_position(symbol, quantity, cost_price)
+
+    def sync_position(self, symbol: str, quantity: int, cost_price: float) -> PositionModel:
+        """
+        同步持仓信息（存在则覆盖，不存在则新增）
+
+        Args:
+            symbol: 股票代码
+            quantity: 持仓数量
+            cost_price: 成本价（支持负数）
+
+        Returns:
+            PositionModel
+        """
+        return self.position_service.sync_position(symbol, quantity, cost_price)
 
     def get_position(self, symbol: str) -> Optional[PositionModel]:
         """

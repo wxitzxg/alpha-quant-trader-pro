@@ -30,7 +30,7 @@ def register_exception_handlers(app: FastAPI):
                 code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 message="Validation error",
                 details=str(exc.errors())
-            ).model_dump()
+            ).model_dump(mode='json')
         )
 
     # Pydantic 模型验证错误
@@ -43,7 +43,7 @@ def register_exception_handlers(app: FastAPI):
                 code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 message="Data validation error",
                 details=str(exc.errors())
-            ).model_dump()
+            ).model_dump(mode='json')
         )
 
     # SQLAlchemy 错误
@@ -56,7 +56,7 @@ def register_exception_handlers(app: FastAPI):
                 code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 message="Database error",
                 details="Internal database error occurred"
-            ).model_dump()
+            ).model_dump(mode='json')
         )
 
     # 通用异常（生产环境不泄露详细信息）
@@ -74,7 +74,7 @@ def register_exception_handlers(app: FastAPI):
                 code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 message="Internal server error",
                 details=details
-            ).model_dump()
+            ).model_dump(mode='json')
         )
 
 
