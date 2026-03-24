@@ -11,6 +11,7 @@ from ..models.portfolio import (
     TradeRecord,
     CashOperation,
     TradeRequest,
+    PositionSyncRequest,
     TransactionHistory
 )
 from ..services import PortfolioService
@@ -200,3 +201,27 @@ async def get_transactions(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting transactions: {str(e)}")
+
+
+@portfolio_router.post("/portfolio/positions/sync", response_model=APIResponse)
+async def sync_position(request: PositionSyncRequest):
+    """同步持仓信息（存在则覆盖，不存在则新增）"""
+    try:
+        result = service.sync_position(
+            symbol=request.stock_code,
+            quantity=request.quantity,
+            cost_price=request.cost_price,
+            current_price=request.current_price
+        )
+
+        if not result.get("success"):
+            raise HTTPException(status_code=500, detail=result.get("message", "Failed to sync position"))
+
+        return APIResponse(
+            data=result.get("data"),
+            message=result.get("message", "Position synced successfully")
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error syncing position: {str(e)}")

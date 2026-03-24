@@ -60,6 +60,14 @@ class TradeRequest(BaseModel):
     transaction_date: Optional[datetime] = Field(None, description="交易日期")
 
 
+class PositionSyncRequest(BaseModel):
+    """持仓同步请求"""
+    stock_code: str = Field(..., description="股票代码")
+    quantity: int = Field(..., ge=0, description="持仓数量")
+    cost_price: float = Field(..., gt=0, description="成本价")
+    current_price: float = Field(..., gt=0, description="当前价格")
+
+
 class PortfolioResponse(BaseModel):
     """持仓响应"""
     account: Optional[AccountSummary] = None
