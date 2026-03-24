@@ -1,4 +1,3 @@
-
 # ========== API服务器配置 ==========
 # API server configuration
 api_server:
@@ -13,14 +12,3 @@ api_server:
 
   # Redis配置
   redis_url: null
-
-  # 认证配置
-  api_key_secret: "your-secret-key-change-in-production"
-  api_key_header: "X-API-Key"
-  api_signature_header: "X-API-Signature"
-  api_timestamp_header: "X-Timestamp"
-
-  # 限流配置
-  rate_limit_free: 60         # 免费用户 (每分钟)
-  rate_limit_standard: 600    # 标准用户 (每分钟)
-  rate_limit_premium: 3600    # 高级用户 (每分钟)

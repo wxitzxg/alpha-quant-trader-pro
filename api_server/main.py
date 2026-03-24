@@ -12,8 +12,6 @@ from contextlib import asynccontextmanager
 
 from .config import settings
 from .exception_handlers.custom_exceptions import register_exception_handlers
-from .middleware.api_key_auth import APIKeyAuthMiddleware
-from .middleware.rate_limit import limiter, rate_limit_exceeded_handler
 from .middleware.request_logger import RequestLoggerMiddleware
 
 # 导入路由
@@ -106,15 +104,9 @@ app.add_middleware(
 
 # 注册中间件（顺序很重要）
 app.add_middleware(RequestLoggerMiddleware)
-app.add_middleware(APIKeyAuthMiddleware)
-# RateLimitMiddleware 通过 limiter 注册
 
 # 注册异常处理器
 register_exception_handlers(app)
-
-# 注册限流器
-app.state.limiter = limiter
-app.add_exception_handler(Exception, rate_limit_exceeded_handler)
 
 # 注册路由
 app.include_router(health_router, prefix="/api/v1", tags=["健康检查"])

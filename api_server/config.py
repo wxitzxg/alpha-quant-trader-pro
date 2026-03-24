@@ -40,17 +40,6 @@ class Settings(BaseSettings):
         # 设置Redis配置
         kwargs.setdefault('REDIS_URL', api_config.redis_url)
 
-        # 设置认证配置
-        kwargs.setdefault('API_KEY_SECRET', api_config.api_key_secret)
-        kwargs.setdefault('API_KEY_HEADER', api_config.api_key_header)
-        kwargs.setdefault('API_SIGNATURE_HEADER', api_config.api_signature_header)
-        kwargs.setdefault('API_TIMESTAMP_HEADER', api_config.api_timestamp_header)
-
-        # 设置限流配置
-        kwargs.setdefault('RATE_LIMIT_FREE', api_config.rate_limit_free)
-        kwargs.setdefault('RATE_LIMIT_STANDARD', api_config.rate_limit_standard)
-        kwargs.setdefault('RATE_LIMIT_PREMIUM', api_config.rate_limit_premium)
-
         # 设置日志配置
         kwargs.setdefault('LOG_LEVEL', unified_config.logging.level)
         kwargs.setdefault('LOG_FILE', "logs/api.log")
@@ -76,17 +65,6 @@ class Settings(BaseSettings):
 
     # Redis 配置（可选）
     REDIS_URL: Optional[str]
-
-    # 认证配置
-    API_KEY_SECRET: str
-    API_KEY_HEADER: str
-    API_SIGNATURE_HEADER: str
-    API_TIMESTAMP_HEADER: str
-
-    # 限流配置
-    RATE_LIMIT_FREE: int  # 免费用户每分钟 60 次
-    RATE_LIMIT_STANDARD: int  # 标准用户每分钟 600 次
-    RATE_LIMIT_PREMIUM: int  # 高级用户每分钟 3600 次
 
     # 日志配置
     LOG_LEVEL: str
