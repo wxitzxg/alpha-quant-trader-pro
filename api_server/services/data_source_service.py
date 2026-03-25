@@ -8,7 +8,8 @@ from typing import Optional, List
 from datetime import datetime
 import pandas as pd
 
-from data_sources import QuoteAPI, KLineAPI
+from data_sources import QuoteAPI, KLineAPI, FundamentalsAPI
+from data_sources.aggregator import DataSourceAggregator, StockListAPI, TopListAPI, KLineStatsAPI
 from data_sources.models import Quote, KLine
 
 
@@ -131,3 +132,83 @@ class DataSourceService:
             if klines:
                 results[symbol] = klines
         return results
+
+    @staticmethod
+    def get_stock_list(
+        page: int = 1,
+        page_size: int = 20,
+        exchange: Optional[str] = None
+    ) -> dict:
+        """获取股票列表（分页）"""
+        try:
+            all_stocks = StockListAPI.get(exchange=exchange)
+            start = (page - 1) * page_size
+            end = start + page_size
+            return {
+                "success": True,
+                "data": {
+                    "stocks": all_stocks[start:end],
+                    "total": len(all_stocks),
+                    "page": page,
+                    "page_size": page_size
+                }
+            }
+        except Exception as e:
+            return {"success": False, "message": f"Failed to get stock list: {e}"}
+
+
+    @staticmethod
+    def get_stock_info(stock_code: str) -> dict:
+        """获取股票详情"""
+        try:
+            aggregator = DataSourceAggregator()
+            detail = aggregator.get_stock_detail(stock_code)
+            if detail:
+                return {"success": True, "data": detail}
+            return {"success": False, "message": f"Stock {stock_code} not found"}
+        except Exception as e:
+            return {"success": False, "message": f"Failed to get stock info: {e}"}
+
+    @staticmethod
+    def get_top_list(type: str, date: Optional[str] = None) -> dict:
+        """获取涨跌排行"""
+        try:
+            items = TopListAPI.get(type=type, date=date)
+            return {
+                "success": True,
+                "data": {
+                    "type": type,
+                    "date": date or datetime.now().strftime("%Y-%m-%d"),
+                    "items": items,
+                    "total": len(items)
+                }
+            }
+        except Exception as e:
+            return {"success": False, "message": f"Failed to get top list: {e}"}
+
+    @staticmethod
+    def get_kline_stats(symbol: str, period: str = "1y") -> dict:
+        """获取K线统计"""
+        try:
+            stats = KLineStatsAPI.get(symbol=symbol, period=period)
+            return {"success": True, "data": stats}
+        except Exception as e:
+            return {"success": False, "message": f"Failed to get kline stats: {e}"}
+
+    @staticmethod
+    def get_financial_indicators(stock_code: str) -> dict:
+        """获取财务指标"""
+        try:
+            now = datetime.now()
+            year = now.year
+            quarter = (now.month - 1) // 3 + 1
+            if quarter == 0:
+                quarter = 4
+                year -= 1
+
+            indicators = FundamentalsAPI.get_indicators(stock_code, year, quarter)
+            if indicators:
+                return {"success": True, "data": indicators}
+            return {"success": False, "message": f"No financial indicators for {stock_code}"}
+        except Exception as e:
+            return {"success": False, "message": f"Failed to get financial indicators: {e}"}
