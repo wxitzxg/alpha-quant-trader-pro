@@ -8,13 +8,33 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
-from typing import Optional
+from typing import Optional, Any
 from datetime import datetime
 import logging
+import json
 
 from ..config import settings
 
 logger = logging.getLogger(__name__)
+
+
+class DatetimeJSONResponse(JSONResponse):
+    """支持 datetime 序列化的 JSONResponse"""
+    
+    def render(self, content: Any) -> bytes:
+        def datetime_handler(obj):
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+        
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+            default=datetime_handler,
+        ).encode("utf-8")
 
 
 def _error_response(code: int, message: str, details: Optional[str] = None) -> dict:
@@ -35,7 +55,7 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         logger.error(f"Validation error: {exc.errors()}")
-        return JSONResponse(
+        return DatetimeJSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=_error_response(
                 code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -48,7 +68,7 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(ValidationError)
     async def pydantic_validation_error_handler(request: Request, exc: ValidationError):
         logger.error(f"Pydantic validation error: {exc.errors()}")
-        return JSONResponse(
+        return DatetimeJSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content=_error_response(
                 code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -61,7 +81,7 @@ def register_exception_handlers(app: FastAPI):
     @app.exception_handler(SQLAlchemyError)
     async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
         logger.error(f"Database error: {str(exc)}")
-        return JSONResponse(
+        return DatetimeJSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=_error_response(
                 code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -79,7 +99,7 @@ def register_exception_handlers(app: FastAPI):
         # 生产环境隐藏详细错误
         details = error_msg if settings.DEBUG else "Internal server error"
 
-        return JSONResponse(
+        return DatetimeJSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=_error_response(
                 code=status.HTTP_500_INTERNAL_SERVER_ERROR,
