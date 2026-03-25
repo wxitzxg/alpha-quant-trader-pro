@@ -10,6 +10,7 @@ from typing import List, Optional, Dict, Any
 from .base import DataSourceAdapter
 from .registry import AdapterRegistry
 from .executor import FallbackExecutor
+from .exceptions import DataSourceError
 from .models import Quote, KLine, BalanceSheet, IncomeStatement, CashFlowStatement
 from common.config import get_config
 
@@ -346,6 +347,45 @@ class DataSourceAggregator:
         )
 
         return result if result is not None else {}
+
+    def get_stock_list(self, exchange: Optional[str] = None) -> List[Dict]:
+        """
+        获取股票列表
+
+        Args:
+            exchange: 交易所筛选 (SH/SZ)，None 表示全部
+
+        Returns:
+            股票列表，每个元素包含 symbol, name, exchange 等字段
+        """
+        adapters = self._get_sorted_adapters('realtime')
+        for adapter in adapters:
+            try:
+                stocks = adapter.get_stock_list()
+                if exchange:
+                    stocks = [s for s in stocks if s.get('exchange') == exchange]
+                return stocks
+            except DataSourceError:
+                continue
+        return []
+
+    def get_stock_detail(self, symbol: str) -> Optional[Dict]:
+        """
+        获取股票详情
+
+        Args:
+            symbol: 股票代码
+
+        Returns:
+            股票详情字典，失败返回 None
+        """
+        adapters = self._get_sorted_adapters('realtime')
+        for adapter in adapters:
+            try:
+                return adapter.get_stock_detail(symbol)
+            except DataSourceError:
+                continue
+        return None
 
 
 # ========== 简化调用接口 ==========
