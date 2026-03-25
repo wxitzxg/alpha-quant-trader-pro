@@ -2,7 +2,7 @@
 
 > **版本**: v1.0
 > **作者**: Alpha Quant Team
-> **最后更新**: 2026-03-19
+> **最后更新**: 2026-03-25
 > **API 基础路径**: `/api/v1`
 > **认证方式**: API Key (部分接口需要)
 
@@ -12,27 +12,37 @@
 
 ## 📋 目录
 
-- [健康检查](#-健康检查)
-- [数据源聚合](#-数据源聚合)
-- [新闻资讯](#-新闻资讯)
-- [财务数据](#-财务数据)
-- [资金流向](#-资金流向)
-- [技术分析](#-技术分析)
-- [基础指标](#-基础技术指标)
-- [VCP 形态](#-vcp-形态)
-- [九转序列](#-九转序列)
-- [ZigZag 转向](#-zigzag-转向)
-- [背离检测](#-背离检测)
-- [五维共振分析](#-五维共振分析)
-- [风险控制](#-风险控制)
-- [预警系统](#-预警系统)
-- [模拟交易](#-模拟交易)
-- [持仓管理](#-持仓管理)
-- [收益统计](#-收益统计)
-- [回测系统](#-回测系统)
-- [市场同步](#-市场数据同步)
+- [一、服务与数据获取](#一服务与数据获取)
+  - [健康检查](#健康检查)
+  - [数据源聚合](#数据源聚合)
+  - [新闻资讯](#新闻资讯)
+  - [财务数据](#财务数据)
+  - [资金流向](#资金流向)
+  - [市场数据同步](#市场数据同步)
+- [二、技术分析](#二技术分析)
+  - [基础技术指标](#基础技术指标)
+  - [VCP 形态](#vcp-形态)
+  - [九转序列](#九转序列)
+  - [ZigZag 转向](#zigzag-转向)
+  - [背离检测](#背离检测)
+  - [五维共振分析](#五维共振分析)
+  - [策略分析](#策略分析)
+- [三、交易管理](#三交易管理)
+  - [持仓管理](#持仓管理)
+- [四、模拟交易](#四模拟交易)
+  - [账户管理](#账户管理)
+  - [交易操作](#交易操作)
+  - [持仓与历史](#持仓与历史)
+  - [收益统计](#收益统计)
+- [五、风险控制](#五风险控制)
+  - [风险控制](#风险控制接口)
+  - [预警系统](#预警系统)
+- [六、回测系统](#六回测系统)
+  - [回测系统](#回测系统接口)
 
 ---
+
+# 一、服务与数据获取
 
 ## 🏥 健康检查
 
@@ -146,7 +156,7 @@ curl http://localhost:8000/api/v1/quote/realtime/600519
     "close": 9.5,
     "volume": 100000,
     "amount": 1000.0,
-    "update_time": "2026-03-19T14:30:00"
+    "update_time": "2026-03-25T14:30:00"
   }
 }
 ```
@@ -178,7 +188,7 @@ curl -X POST http://localhost:8000/api/v1/quote/batch \
   "message": "Batch quotes retrieved successfully",
   "data": {
     "quotes": [],
-    "timestamp": "2026-03-19T14:30:00"
+    "timestamp": "2026-03-25T14:30:00"
   }
 }
 ```
@@ -204,7 +214,7 @@ curl "http://localhost:8000/api/v1/quote/top-list?type=gain"
   "message": "Top list retrieved successfully",
   "data": {
     "type": "gain",
-    "date": "2026-03-19",
+    "date": "2026-03-25",
     "items": [],
     "total": 0
   }
@@ -279,7 +289,7 @@ curl -X POST http://localhost:8000/api/v1/kline/batch \
   "message": "Batch KLine data retrieved successfully",
   "data": {
     "data": {},
-    "timestamp": "2026-03-19T14:30:00"
+    "timestamp": "2026-03-25T14:30:00"
   }
 }
 ```
@@ -683,7 +693,379 @@ curl "http://localhost:8000/api/v1/fundflow/dragon-tiger/600519?start_date=2023-
 
 ---
 
-## 📈 技术分析
+## 🔄 市场数据同步
+
+### 1. 同步股票列表
+
+**接口**: `POST /api/v1/market/stock/sync`
+**用途**: 同步股票列表到数据库
+
+**请求体**:
+```json
+{
+  "exchanges": ["SH", "SZ"],
+  "force_update": false
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/market/stock/sync \
+  -H "Content-Type: application/json" \
+  -d '{"exchanges": ["SH", "SZ"]}'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Stock sync task created",
+  "data": {
+    "task_id": "task_123",
+    "sync_type": "stock",
+    "status": {
+      "status": "pending",
+      "progress": 0,
+      "total_count": 0,
+      "completed_count": 0,
+      "failed_count": 0
+    }
+  }
+}
+```
+
+### 2. 同步状态
+
+**接口**: `GET /api/v1/market/stock/sync-status`
+**用途**: 获取股票同步状态
+
+**请求示例**:
+```bash
+curl http://localhost:8000/api/v1/market/stock/sync-status
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Sync status retrieved",
+  "data": {}
+}
+```
+
+### 3. 同步单股K线
+
+**接口**: `POST /api/v1/market/kline/sync/{stock_code}`
+**用途**: 同步单只股票的历史K线数据
+
+**参数**:
+- `stock_code` (str): 股票代码
+
+**请求体**:
+```json
+{
+  "start_date": "2023-01-01",
+  "end_date": "2023-12-31",
+  "force_update": false
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/market/kline/sync/600519 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "start_date": "2023-01-01",
+    "end_date": "2023-12-31"
+  }'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "KLine sync task created for 600519",
+  "data": {
+    "task_id": "task_600519",
+    "sync_type": "kline",
+    "status": {
+      "status": "pending",
+      "progress": 0,
+      "total_count": 0,
+      "completed_count": 0,
+      "failed_count": 0
+    }
+  }
+}
+```
+
+---
+
+# 二、技术分析
+
+## 📊 基础技术指标
+
+### 1. 计算基础技术指标 (POST)
+
+**接口**: `POST /api/v1/indicators/base`
+**用途**: 计算多种基础技术指标
+
+**支持的指标**:
+- 趋势指标：MA5/10/20/50/200, EMA, MACD, ADX
+- 动量指标：RSI, Stochastic, CCI, Williams %R
+- 波动率指标：布林带, ATR, 标准差
+- 成交量指标：OBV, 量比
+
+**请求体**:
+```json
+{
+  "stock_code": "600519",
+  "days": 120,
+  "indicators": ["ma", "macd", "rsi"]
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/indicators/base \
+  -H "Content-Type: application/json" \
+  -d '{"stock_code": "600519", "days": 120}'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "基础技术指标计算成功",
+  "data": {
+    "stock_code": "600519",
+    "days": 120,
+    "data_points": 120,
+    "latest_date": "2026-03-25",
+    "latest_price": 1688.5,
+    "signals": {},
+    "indicators": {
+      "ma5": 1680.0,
+      "ma10": 1675.5,
+      "ma20": 1670.0,
+      "macd": 15.5,
+      "macd_signal": 10.0,
+      "rsi": 55.5,
+      "bb_upper": 1700.0,
+      "bb_middle": 1680.0,
+      "bb_lower": 1660.0
+    }
+  }
+}
+```
+
+### 2. 计算基础技术指标 (GET)
+
+**接口**: `GET /api/v1/indicators/base/{stock_code}`
+**用途**: GET 方式计算基础技术指标
+
+**参数**:
+- `stock_code` (str): 股票代码
+- `days` (int): 回溯天数，最小值 1，最大值 365
+
+**请求示例**:
+```bash
+curl "http://localhost:8000/api/v1/indicators/base/600519?days=120"
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "基础技术指标计算成功",
+  "data": {}
+}
+```
+
+---
+
+## 📐 VCP 形态
+
+### 1. 检测 VCP 形态
+
+**接口**: `POST /api/v1/indicators/vcp`
+**用途**: 检测波动收缩形态 (VCP - Volatility Contraction Pattern)
+
+**请求体**:
+```json
+{
+  "stock_code": "600519",
+  "days": 120,
+  "min_drops": 2,
+  "max_drops": 4
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/indicators/vcp \
+  -H "Content-Type: application/json" \
+  -d '{"stock_code": "600519", "days": 120}'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "VCP 形态检测完成",
+  "data": {
+    "stock_code": "600519",
+    "days": 120,
+    "analysis_date": "2026-03-25T14:30:00",
+    "is_vcp": false,
+    "stage": "unknown",
+    "stage_description": "未知阶段",
+    "contraction_ratio": 0,
+    "drop_count": 0,
+    "breakout_detected": false,
+    "drops": []
+  }
+}
+```
+
+---
+
+## 🔢 九转序列
+
+### 1. 计算九转序列
+
+**接口**: `POST /api/v1/indicators/td-sequential`
+**用途**: 计算 TD 序列（神奇九转）
+
+**请求体**:
+```json
+{
+  "stock_code": "600519",
+  "days": 30,
+  "period": 9,
+  "compare_period": 4
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/indicators/td-sequential \
+  -H "Content-Type: application/json" \
+  -d '{"stock_code": "600519", "days": 30}'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "TD 序列计算成功",
+  "data": {
+    "stock_code": "600519",
+    "days": 30,
+    "period": 9,
+    "compare_period": 4,
+    "analysis_date": "2026-03-25T14:30:00",
+    "td_buy_count": 0,
+    "td_sell_count": 0,
+    "td_buy_signal": false,
+    "td_sell_signal": false,
+    "status": "neutral",
+    "interpretation": "⚪ 无信号"
+  }
+}
+```
+
+---
+
+## 📉 ZigZag 转向
+
+### 1. 计算 ZigZag 指标
+
+**接口**: `POST /api/v1/indicators/zigzag`
+**用途**: 计算 ZigZag 之字转向指标，识别主要价格转折点
+
+**请求体**:
+```json
+{
+  "stock_code": "600519",
+  "days": 120,
+  "threshold": 0.05
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/indicators/zigzag \
+  -H "Content-Type: application/json" \
+  -d '{"stock_code": "600519", "days": 120}'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "ZigZag 计算成功",
+  "data": {
+    "stock_code": "600519",
+    "days": 120,
+    "threshold": 0.05,
+    "analysis_date": "2026-03-25T14:30:00",
+    "trend": "neutral",
+    "trend_direction": "⚪ 横盘整理",
+    "is_uptrend": false,
+    "is_downtrend": false,
+    "recent_pivots": []
+  }
+}
+```
+
+---
+
+## 🔄 背离检测
+
+### 1. 检测背离信号
+
+**接口**: `POST /api/v1/indicators/divergence`
+**用途**: 检测价格与指标之间的背离信号
+
+**背离类型**:
+- 顶背离：价格创新高，但指标未创新高 (看跌信号)
+- 底背离：价格创新低，但指标未创新低 (看涨信号)
+
+**请求体**:
+```json
+{
+  "stock_code": "600519",
+  "days": 60,
+  "indicator": "macd"
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/indicators/divergence \
+  -H "Content-Type: application/json" \
+  -d '{"stock_code": "600519", "days": 60}'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "未检测到背离",
+  "data": {
+    "stock_code": "600519",
+    "days": 60,
+    "indicator": "macd",
+    "analysis_date": "2026-03-25T14:30:00",
+    "divergences": {}
+  }
+}
+```
+
+---
+
+## 📈 五维共振分析
 
 ### 1. 五维共振分析
 
@@ -796,7 +1178,11 @@ curl "http://localhost:8000/api/v1/analysis/report/600519?interval=1d&days=120"
 }
 ```
 
-### 5. VCP 策略分析
+---
+
+## 🎯 策略分析
+
+### 1. VCP 策略分析
 
 **接口**: `GET /api/v1/analysis/strategy/vcp/{stock_code}`
 **用途**: 执行 VCP 策略分析
@@ -826,7 +1212,7 @@ curl "http://localhost:8000/api/v1/analysis/strategy/vcp/600519?days=120"
 }
 ```
 
-### 6. 九转策略分析
+### 2. 九转策略分析
 
 **接口**: `GET /api/v1/analysis/strategy/td/{stock_code}`
 **用途**: 执行九转黄金坑策略分析
@@ -856,7 +1242,7 @@ curl "http://localhost:8000/api/v1/analysis/strategy/td/600519?days=120"
 }
 ```
 
-### 7. 背离策略分析
+### 3. 背离策略分析
 
 **接口**: `GET /api/v1/analysis/strategy/divergence/{stock_code}`
 **用途**: 执行顶部背离策略分析
@@ -888,776 +1274,7 @@ curl "http://localhost:8000/api/v1/analysis/strategy/divergence/600519?days=120"
 
 ---
 
-## 📊 基础技术指标
-
-### 1. 计算基础技术指标 (POST)
-
-**接口**: `POST /api/v1/indicators/base`
-**用途**: 计算多种基础技术指标
-
-**支持的指标**:
-- 趋势指标：MA5/10/20/50/200, EMA, MACD, ADX
-- 动量指标：RSI, Stochastic, CCI, Williams %R
-- 波动率指标：布林带, ATR, 标准差
-- 成交量指标：OBV, 量比
-
-**请求体**:
-```json
-{
-  "stock_code": "600519",
-  "days": 120,
-  "indicators": ["ma", "macd", "rsi"]
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/indicators/base \
-  -H "Content-Type: application/json" \
-  -d '{"stock_code": "600519", "days": 120}'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "基础技术指标计算成功",
-  "data": {
-    "stock_code": "600519",
-    "days": 120,
-    "data_points": 120,
-    "latest_date": "2026-03-19",
-    "latest_price": 1688.5,
-    "signals": {},
-    "indicators": {
-      "ma5": 1680.0,
-      "ma10": 1675.5,
-      "ma20": 1670.0,
-      "macd": 15.5,
-      "macd_signal": 10.0,
-      "rsi": 55.5,
-      "bb_upper": 1700.0,
-      "bb_middle": 1680.0,
-      "bb_lower": 1660.0
-    }
-  }
-}
-```
-
-### 2. 计算基础技术指标 (GET)
-
-**接口**: `GET /api/v1/indicators/base/{stock_code}`
-**用途**: GET 方式计算基础技术指标
-
-**参数**:
-- `stock_code` (str): 股票代码
-- `days` (int): 回溯天数，最小值 1，最大值 365
-
-**请求示例**:
-```bash
-curl "http://localhost:8000/api/v1/indicators/base/600519?days=120"
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "基础技术指标计算成功",
-  "data": {}
-}
-```
-
----
-
-## 📐 VCP 形态
-
-### 1. 检测 VCP 形态
-
-**接口**: `POST /api/v1/indicators/vcp`
-**用途**: 检测波动收缩形态 (VCP - Volatility Contraction Pattern)
-
-**请求体**:
-```json
-{
-  "stock_code": "600519",
-  "days": 120,
-  "min_drops": 2,
-  "max_drops": 4
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/indicators/vcp \
-  -H "Content-Type: application/json" \
-  -d '{"stock_code": "600519", "days": 120}'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "VCP 形态检测完成",
-  "data": {
-    "stock_code": "600519",
-    "days": 120,
-    "analysis_date": "2026-03-19T14:30:00",
-    "is_vcp": false,
-    "stage": "unknown",
-    "stage_description": "未知阶段",
-    "contraction_ratio": 0,
-    "drop_count": 0,
-    "breakout_detected": false,
-    "drops": []
-  }
-}
-```
-
----
-
-## 🔢 九转序列
-
-### 1. 计算九转序列
-
-**接口**: `POST /api/v1/indicators/td-sequential`
-**用途**: 计算 TD 序列（神奇九转）
-
-**请求体**:
-```json
-{
-  "stock_code": "600519",
-  "days": 30,
-  "period": 9,
-  "compare_period": 4
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/indicators/td-sequential \
-  -H "Content-Type: application/json" \
-  -d '{"stock_code": "600519", "days": 30}'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "TD 序列计算成功",
-  "data": {
-    "stock_code": "600519",
-    "days": 30,
-    "period": 9,
-    "compare_period": 4,
-    "analysis_date": "2026-03-19T14:30:00",
-    "td_buy_count": 0,
-    "td_sell_count": 0,
-    "td_buy_signal": false,
-    "td_sell_signal": false,
-    "status": "neutral",
-    "interpretation": "⚪ 无信号"
-  }
-}
-```
-
----
-
-## 📉 ZigZag 转向
-
-### 1. 计算 ZigZag 指标
-
-**接口**: `POST /api/v1/indicators/zigzag`
-**用途**: 计算 ZigZag 之字转向指标，识别主要价格转折点
-
-**请求体**:
-```json
-{
-  "stock_code": "600519",
-  "days": 120,
-  "threshold": 0.05
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/indicators/zigzag \
-  -H "Content-Type: application/json" \
-  -d '{"stock_code": "600519", "days": 120}'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "ZigZag 计算成功",
-  "data": {
-    "stock_code": "600519",
-    "days": 120,
-    "threshold": 0.05,
-    "analysis_date": "2026-03-19T14:30:00",
-    "trend": "neutral",
-    "trend_direction": "⚪ 横盘整理",
-    "is_uptrend": false,
-    "is_downtrend": false,
-    "recent_pivots": []
-  }
-}
-```
-
----
-
-## 🔄 背离检测
-
-### 1. 检测背离信号
-
-**接口**: `POST /api/v1/indicators/divergence`
-**用途**: 检测价格与指标之间的背离信号
-
-**背离类型**:
-- 顶背离：价格创新高，但指标未创新高 (看跌信号)
-- 底背离：价格创新低，但指标未创新低 (看涨信号)
-
-**请求体**:
-```json
-{
-  "stock_code": "600519",
-  "days": 60,
-  "indicator": "macd"
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/indicators/divergence \
-  -H "Content-Type: application/json" \
-  -d '{"stock_code": "600519", "days": 60}'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "未检测到背离",
-  "data": {
-    "stock_code": "600519",
-    "days": 60,
-    "indicator": "macd",
-    "analysis_date": "2026-03-19T14:30:00",
-    "divergences": {}
-  }
-}
-```
-
----
-
-## 🛡️ 风险控制
-
-### 1. 波动率分析
-
-**接口**: `GET /api/v1/risk/volatility/{stock_code}`
-**用途**: 计算股票的波动率和风险指标
-
-**参数**:
-- `stock_code` (str): 股票代码
-- `days` (int): 回溯天数，最小值 1
-
-**请求示例**:
-```bash
-curl "http://localhost:8000/api/v1/risk/volatility/600519?days=30"
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Volatility analysis for 600519 completed successfully",
-  "data": {
-    "stock_code": "600519",
-    "risk_metrics": {
-      "var_95": 0.02,
-      "var_99": 0.03,
-      "volatility": 0.15,
-      "max_drawdown": 0.10,
-      "sharpe_ratio": 1.5,
-      "beta": 1.2,
-      "analysis_days": 30,
-      "data_points": 30
-    },
-    "current_price": 1688.5,
-    "analysis_time": "2026-03-19T14:30:00"
-  }
-}
-```
-
-### 2. 计算止损位
-
-**接口**: `POST /api/v1/risk/stop-loss/calculate`
-**用途**: 根据不同方法计算止损位
-
-**支持的方法**:
-- `atr`: 平均真实波幅
-- `volatility`: 波动率
-- `percentage`: 固定百分比
-
-**请求体**:
-```json
-{
-  "stock_code": "600519",
-  "risk_tolerance": 0.05,
-  "method": "atr"
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/risk/stop-loss/calculate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "stock_code": "600519",
-    "risk_tolerance": 0.05,
-    "method": "atr"
-  }'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Stop loss calculated successfully",
-  "data": {
-    "stock_code": "600519",
-    "current_price": 1688.5,
-    "stop_loss": 1600.0,
-    "risk_tolerance": 0.05,
-    "method": "atr",
-    "risk_reward_ratio": 2.5,
-    "potential_loss_pct": 5.24,
-    "calculation_time": "2026-03-19T14:30:00"
-  }
-}
-```
-
-### 3. 投资组合分散度分析
-
-**接口**: `GET /api/v1/risk/diversification`
-**用途**: 分析投资组合的分散度，计算赫芬达尔-赫希曼指数 (HHI)
-
-**请求示例**:
-```bash
-curl http://localhost:8000/api/v1/risk/diversification
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Portfolio diversification analysis completed successfully",
-  "data": {
-    "diversification_score": 75.5,
-    "concentration_risk": "LOW",
-    "hhi_index": 0.12,
-    "positions_count": 5,
-    "top_position_ratio": 0.3,
-    "top5_ratio": 0.8,
-    "recommendation": "持仓分散度良好",
-    "calculation_time": "2026-03-19T14:30:00"
-  }
-}
-```
-
-### 4. 投资组合 VaR
-
-**接口**: `GET /api/v1/risk/portfolio/value-at-risk`
-**用途**: 计算投资组合的风险价值 (Value at Risk)
-
-**参数**:
-- `confidence_level` (float): 置信水平 (0.9-0.99)
-
-**请求示例**:
-```bash
-curl "http://localhost:8000/api/v1/risk/portfolio/value-at-risk?confidence_level=0.95"
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Portfolio VaR calculated successfully",
-  "data": {
-    "var": 5000.0,
-    "var_pct": 5.0,
-    "confidence_level": 0.95,
-    "total_portfolio_value": 100000.0,
-    "positions_count": 5,
-    "method": "Historical Simulation (Simplified)",
-    "calculation_time": "2026-03-19T14:30:00"
-  }
-}
-```
-
----
-
-## ⚠️ 预警系统
-
-### 1. 获取已触发预警
-
-**接口**: `GET /api/v1/alerts/triggered`
-**用途**: 获取所有已触发的预警（包括投资组合风险和持仓预警）
-
-**请求示例**:
-```bash
-curl http://localhost:8000/api/v1/alerts/triggered
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Triggered alerts retrieved successfully",
-  "data": {
-    "alerts": [],
-    "total_count": 0,
-    "critical_count": 0,
-    "warning_count": 0,
-    "info_count": 0,
-    "check_time": "2026-03-19T14:30:00"
-  }
-}
-```
-
-### 2. 单股预警
-
-**接口**: `GET /api/v1/alerts/stock/{stock_code}`
-**用途**: 获取单只股票的预警信息
-
-**参数**:
-- `stock_code` (str): 股票代码
-- `check_types` (str): 检查类型 (price/technical/all)
-
-**请求示例**:
-```bash
-curl "http://localhost:8000/api/v1/alerts/stock/600519?check_types=all"
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Alerts for 600519 retrieved successfully",
-  "data": {
-    "stock_code": "600519",
-    "current_price": 1688.5,
-    "alerts": [],
-    "total_count": 0,
-    "check_time": "2026-03-19T14:30:00"
-  }
-}
-```
-
-### 3. 监控投资组合风险
-
-**接口**: `POST /api/v1/alerts/portfolio/monitor`
-**用途**: 主动监控投资组合风险，生成风险建议
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/alerts/portfolio/monitor
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Portfolio risk monitoring completed successfully",
-  "data": {
-    "alerts": [],
-    "summary": {
-      "total_alerts": 0,
-      "critical_alerts": 0,
-      "warning_alerts": 0,
-      "info_alerts": 0,
-      "check_time": "2026-03-19T14:30:00",
-      "recommendations": ["✅ 投资组合风险状况良好"]
-    }
-  }
-}
-```
-
----
-
-## 🧪 模拟交易
-
-### 1. 创建模拟账户
-
-**接口**: `POST /api/v1/simulation/account`
-**用途**: 创建新的模拟交易账户
-
-**请求体**:
-```json
-{
-  "account_name": "测试账户1",
-  "initial_capital": 100000,
-  "commission_rate": 0.0003
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/simulation/account \
-  -H "Content-Type: application/json" \
-  -d '{
-    "account_name": "测试账户1",
-    "initial_capital": 100000,
-    "commission_rate": 0.0003
-  }'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "账户创建成功",
-  "data": {
-    "account_id": "acc_12345",
-    "account_name": "测试账户1",
-    "initial_capital": 100000,
-    "current_balance": 100000,
-    "commission_rate": 0.0003
-  }
-}
-```
-
-### 2. 获取账户信息
-
-**接口**: `GET /api/v1/simulation/account/{account_id}`
-**用途**: 获取模拟账户的详细信息
-
-**参数**:
-- `account_id` (str): 账户ID
-
-**请求示例**:
-```bash
-curl http://localhost:8000/api/v1/simulation/account/acc_12345
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "账户信息获取成功",
-  "data": {
-    "account_id": "acc_12345",
-    "account_name": "测试账户1",
-    "initial_capital": 100000,
-    "current_balance": 100000,
-    "total_profit": 0,
-    "win_rate": 0,
-    "positions": []
-  }
-}
-```
-
-### 3. 列出所有账户
-
-**接口**: `GET /api/v1/simulation/accounts`
-**用途**: 获取所有模拟账户列表
-
-**请求示例**:
-```bash
-curl http://localhost:8000/api/v1/simulation/accounts
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "账户列表获取成功",
-  "data": [
-    {
-      "account_id": "acc_12345",
-      "account_name": "测试账户1",
-      "current_balance": 100000
-    }
-  ]
-}
-```
-
-### 4. 买入股票
-
-**接口**: `POST /api/v1/simulation/buy`
-**用途**: 执行买入操作
-
-**请求体**:
-```json
-{
-  "account_id": "acc_12345",
-  "symbol": "600519",
-  "price": 1688.5,
-  "quantity": 100
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/simulation/buy \
-  -H "Content-Type: application/json" \
-  -d '{
-    "account_id": "acc_12345",
-    "symbol": "600519",
-    "price": 1688.5,
-    "quantity": 100
-  }'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "买入成功",
-  "data": {
-    "trade_id": "trade_001",
-    "account_id": "acc_12345",
-    "symbol": "600519",
-    "action": "buy",
-    "price": 1688.5,
-    "quantity": 100,
-    "amount": 168850,
-    "commission": 50.65,
-    "total_cost": 168900.65,
-    "timestamp": "2026-03-19T14:30:00",
-    "account_balance": 831099.35
-  }
-}
-```
-
-### 5. 卖出股票
-
-**接口**: `POST /api/v1/simulation/sell`
-**用途**: 执行卖出操作
-
-**请求体**:
-```json
-{
-  "account_id": "acc_12345",
-  "symbol": "600519",
-  "price": 1700.0,
-  "quantity": 100
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/simulation/sell \
-  -H "Content-Type: application/json" \
-  -d '{
-    "account_id": "acc_12345",
-    "symbol": "600519",
-    "price": 1700.0,
-    "quantity": 100
-  }'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "卖出成功",
-  "data": {
-    "trade_id": "trade_002",
-    "account_id": "acc_12345",
-    "symbol": "600519",
-    "action": "sell",
-    "price": 1700.0,
-    "quantity": 100,
-    "amount": 170000,
-    "commission": 51.0,
-    "pnl": 1150,
-    "total_revenue": 169949,
-    "timestamp": "2026-03-19T14:35:00",
-    "account_balance": 1001048.35
-  }
-}
-```
-
-### 6. 持仓列表
-
-**接口**: `GET /api/v1/simulation/positions/{account_id}`
-**用途**: 获取账户的持仓列表
-
-**参数**:
-- `account_id` (str): 账户ID
-
-**请求示例**:
-```bash
-curl http://localhost:8000/api/v1/simulation/positions/acc_12345
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "持仓列表获取成功",
-  "data": {
-    "account_id": "acc_12345",
-    "positions": [],
-    "total_positions": 0
-  }
-}
-```
-
-### 7. 交易历史
-
-**接口**: `GET /api/v1/simulation/trades/{account_id}`
-**用途**: 获取账户的交易历史
-
-**参数**:
-- `account_id` (str): 账户ID
-- `limit` (int): 返回数量限制，最小值 1
-
-**请求示例**:
-```bash
-curl "http://localhost:8000/api/v1/simulation/trades/acc_12345?limit=20"
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "交易历史获取成功",
-  "data": {
-    "account_id": "acc_12345",
-    "trades": [],
-    "total_trades": 0
-  }
-}
-```
-
-### 8. 删除账户
-
-**接口**: `DELETE /api/v1/simulation/account/{account_id}`
-**用途**: 删除模拟账户
-
-**参数**:
-- `account_id` (str): 账户ID
-
-**请求示例**:
-```bash
-curl -X DELETE http://localhost:8000/api/v1/simulation/account/acc_12345
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "账户删除成功",
-  "data": {
-    "account_id": "acc_12345",
-    "deleted_at": "2026-03-19T14:40:00"
-  }
-}
-```
-
----
+# 三、交易管理
 
 ## 💼 持仓管理
 
@@ -1748,7 +1365,7 @@ curl http://localhost:8000/api/v1/portfolio/positions/600519
   "stock_code": "600519",
   "quantity": 100,
   "price": 1688.5,
-  "transaction_date": "2026-03-19"
+  "transaction_date": "2026-03-25"
 }
 ```
 
@@ -1760,7 +1377,7 @@ curl -X POST http://localhost:8000/api/v1/portfolio/trade/buy \
     "stock_code": "600519",
     "quantity": 100,
     "price": 1688.5,
-    "transaction_date": "2026-03-19"
+    "transaction_date": "2026-03-25"
   }'
 ```
 
@@ -1784,7 +1401,7 @@ curl -X POST http://localhost:8000/api/v1/portfolio/trade/buy \
   "stock_code": "600519",
   "quantity": 100,
   "price": 1700.0,
-  "transaction_date": "2026-03-19"
+  "transaction_date": "2026-03-25"
 }
 ```
 
@@ -1796,7 +1413,7 @@ curl -X POST http://localhost:8000/api/v1/portfolio/trade/sell \
     "stock_code": "600519",
     "quantity": 100,
     "price": 1700.0,
-    "transaction_date": "2026-03-19"
+    "transaction_date": "2026-03-25"
   }'
 ```
 
@@ -1935,6 +1552,290 @@ curl -X POST http://localhost:8000/api/v1/portfolio/positions/sync \
 
 ---
 
+# 四、模拟交易
+
+## 🏦 账户管理
+
+### 1. 创建模拟账户
+
+**接口**: `POST /api/v1/simulation/account`
+**用途**: 创建新的模拟交易账户
+
+**请求体**:
+```json
+{
+  "account_name": "测试账户1",
+  "initial_capital": 100000,
+  "commission_rate": 0.0003
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/simulation/account \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_name": "测试账户1",
+    "initial_capital": 100000,
+    "commission_rate": 0.0003
+  }'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "账户创建成功",
+  "data": {
+    "account_id": "acc_12345",
+    "account_name": "测试账户1",
+    "initial_capital": 100000,
+    "current_balance": 100000,
+    "commission_rate": 0.0003
+  }
+}
+```
+
+### 2. 获取账户信息
+
+**接口**: `GET /api/v1/simulation/account/{account_id}`
+**用途**: 获取模拟账户的详细信息
+
+**参数**:
+- `account_id` (str): 账户ID
+
+**请求示例**:
+```bash
+curl http://localhost:8000/api/v1/simulation/account/acc_12345
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "账户信息获取成功",
+  "data": {
+    "account_id": "acc_12345",
+    "account_name": "测试账户1",
+    "initial_capital": 100000,
+    "current_balance": 100000,
+    "total_profit": 0,
+    "win_rate": 0,
+    "positions": []
+  }
+}
+```
+
+### 3. 列出所有账户
+
+**接口**: `GET /api/v1/simulation/accounts`
+**用途**: 获取所有模拟账户列表
+
+**请求示例**:
+```bash
+curl http://localhost:8000/api/v1/simulation/accounts
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "账户列表获取成功",
+  "data": [
+    {
+      "account_id": "acc_12345",
+      "account_name": "测试账户1",
+      "current_balance": 100000
+    }
+  ]
+}
+```
+
+### 4. 删除账户
+
+**接口**: `DELETE /api/v1/simulation/account/{account_id}`
+**用途**: 删除模拟账户
+
+**参数**:
+- `account_id` (str): 账户ID
+
+**请求示例**:
+```bash
+curl -X DELETE http://localhost:8000/api/v1/simulation/account/acc_12345
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "账户删除成功",
+  "data": {
+    "account_id": "acc_12345",
+    "deleted_at": "2026-03-25T14:40:00"
+  }
+}
+```
+
+---
+
+## 💱 交易操作
+
+### 1. 买入股票
+
+**接口**: `POST /api/v1/simulation/buy`
+**用途**: 执行买入操作
+
+**请求体**:
+```json
+{
+  "account_id": "acc_12345",
+  "symbol": "600519",
+  "price": 1688.5,
+  "quantity": 100
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/simulation/buy \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "acc_12345",
+    "symbol": "600519",
+    "price": 1688.5,
+    "quantity": 100
+  }'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "买入成功",
+  "data": {
+    "trade_id": "trade_001",
+    "account_id": "acc_12345",
+    "symbol": "600519",
+    "action": "buy",
+    "price": 1688.5,
+    "quantity": 100,
+    "amount": 168850,
+    "commission": 50.65,
+    "total_cost": 168900.65,
+    "timestamp": "2026-03-25T14:30:00",
+    "account_balance": 831099.35
+  }
+}
+```
+
+### 2. 卖出股票
+
+**接口**: `POST /api/v1/simulation/sell`
+**用途**: 执行卖出操作
+
+**请求体**:
+```json
+{
+  "account_id": "acc_12345",
+  "symbol": "600519",
+  "price": 1700.0,
+  "quantity": 100
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/simulation/sell \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "acc_12345",
+    "symbol": "600519",
+    "price": 1700.0,
+    "quantity": 100
+  }'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "卖出成功",
+  "data": {
+    "trade_id": "trade_002",
+    "account_id": "acc_12345",
+    "symbol": "600519",
+    "action": "sell",
+    "price": 1700.0,
+    "quantity": 100,
+    "amount": 170000,
+    "commission": 51.0,
+    "pnl": 1150,
+    "total_revenue": 169949,
+    "timestamp": "2026-03-25T14:35:00",
+    "account_balance": 1001048.35
+  }
+}
+```
+
+---
+
+## 📋 持仓与历史
+
+### 1. 持仓列表
+
+**接口**: `GET /api/v1/simulation/positions/{account_id}`
+**用途**: 获取账户的持仓列表
+
+**参数**:
+- `account_id` (str): 账户ID
+
+**请求示例**:
+```bash
+curl http://localhost:8000/api/v1/simulation/positions/acc_12345
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "持仓列表获取成功",
+  "data": {
+    "account_id": "acc_12345",
+    "positions": [],
+    "total_positions": 0
+  }
+}
+```
+
+### 2. 交易历史
+
+**接口**: `GET /api/v1/simulation/trades/{account_id}`
+**用途**: 获取账户的交易历史
+
+**参数**:
+- `account_id` (str): 账户ID
+- `limit` (int): 返回数量限制，最小值 1
+
+**请求示例**:
+```bash
+curl "http://localhost:8000/api/v1/simulation/trades/acc_12345?limit=20"
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "交易历史获取成功",
+  "data": {
+    "account_id": "acc_12345",
+    "trades": [],
+    "total_trades": 0
+  }
+}
+```
+
+---
+
 ## 📊 收益统计
 
 ### 1. 账户收益汇总
@@ -1966,7 +1867,7 @@ curl http://localhost:8000/api/v1/performance/account/summary
     },
     "transactions_count": 0,
     "positions_count": 0,
-    "calculation_time": "2026-03-19T14:30:00"
+    "calculation_time": "2026-03-25T14:30:00"
   }
 }
 ```
@@ -2060,7 +1961,246 @@ curl http://localhost:8000/api/v1/performance/compare
 
 ---
 
-## 🧪 回测系统
+# 五、风险控制
+
+## 🛡️ 风险控制接口
+
+### 1. 波动率分析
+
+**接口**: `GET /api/v1/risk/volatility/{stock_code}`
+**用途**: 计算股票的波动率和风险指标
+
+**参数**:
+- `stock_code` (str): 股票代码
+- `days` (int): 回溯天数，最小值 1
+
+**请求示例**:
+```bash
+curl "http://localhost:8000/api/v1/risk/volatility/600519?days=30"
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Volatility analysis for 600519 completed successfully",
+  "data": {
+    "stock_code": "600519",
+    "risk_metrics": {
+      "var_95": 0.02,
+      "var_99": 0.03,
+      "volatility": 0.15,
+      "max_drawdown": 0.10,
+      "sharpe_ratio": 1.5,
+      "beta": 1.2,
+      "analysis_days": 30,
+      "data_points": 30
+    },
+    "current_price": 1688.5,
+    "analysis_time": "2026-03-25T14:30:00"
+  }
+}
+```
+
+### 2. 计算止损位
+
+**接口**: `POST /api/v1/risk/stop-loss/calculate`
+**用途**: 根据不同方法计算止损位
+
+**支持的方法**:
+- `atr`: 平均真实波幅
+- `volatility`: 波动率
+- `percentage`: 固定百分比
+
+**请求体**:
+```json
+{
+  "stock_code": "600519",
+  "risk_tolerance": 0.05,
+  "method": "atr"
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/risk/stop-loss/calculate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stock_code": "600519",
+    "risk_tolerance": 0.05,
+    "method": "atr"
+  }'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Stop loss calculated successfully",
+  "data": {
+    "stock_code": "600519",
+    "current_price": 1688.5,
+    "stop_loss": 1600.0,
+    "risk_tolerance": 0.05,
+    "method": "atr",
+    "risk_reward_ratio": 2.5,
+    "potential_loss_pct": 5.24,
+    "calculation_time": "2026-03-25T14:30:00"
+  }
+}
+```
+
+### 3. 投资组合分散度分析
+
+**接口**: `GET /api/v1/risk/diversification`
+**用途**: 分析投资组合的分散度，计算赫芬达尔-赫希曼指数 (HHI)
+
+**请求示例**:
+```bash
+curl http://localhost:8000/api/v1/risk/diversification
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Portfolio diversification analysis completed successfully",
+  "data": {
+    "diversification_score": 75.5,
+    "concentration_risk": "LOW",
+    "hhi_index": 0.12,
+    "positions_count": 5,
+    "top_position_ratio": 0.3,
+    "top5_ratio": 0.8,
+    "recommendation": "持仓分散度良好",
+    "calculation_time": "2026-03-25T14:30:00"
+  }
+}
+```
+
+### 4. 投资组合 VaR
+
+**接口**: `GET /api/v1/risk/portfolio/value-at-risk`
+**用途**: 计算投资组合的风险价值 (Value at Risk)
+
+**参数**:
+- `confidence_level` (float): 置信水平 (0.9-0.99)
+
+**请求示例**:
+```bash
+curl "http://localhost:8000/api/v1/risk/portfolio/value-at-risk?confidence_level=0.95"
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Portfolio VaR calculated successfully",
+  "data": {
+    "var": 5000.0,
+    "var_pct": 5.0,
+    "confidence_level": 0.95,
+    "total_portfolio_value": 100000.0,
+    "positions_count": 5,
+    "method": "Historical Simulation (Simplified)",
+    "calculation_time": "2026-03-25T14:30:00"
+  }
+}
+```
+
+---
+
+## ⚠️ 预警系统
+
+### 1. 获取已触发预警
+
+**接口**: `GET /api/v1/alerts/triggered`
+**用途**: 获取所有已触发的预警（包括投资组合风险和持仓预警）
+
+**请求示例**:
+```bash
+curl http://localhost:8000/api/v1/alerts/triggered
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Triggered alerts retrieved successfully",
+  "data": {
+    "alerts": [],
+    "total_count": 0,
+    "critical_count": 0,
+    "warning_count": 0,
+    "info_count": 0,
+    "check_time": "2026-03-25T14:30:00"
+  }
+}
+```
+
+### 2. 单股预警
+
+**接口**: `GET /api/v1/alerts/stock/{stock_code}`
+**用途**: 获取单只股票的预警信息
+
+**参数**:
+- `stock_code` (str): 股票代码
+- `check_types` (str): 检查类型 (price/technical/all)
+
+**请求示例**:
+```bash
+curl "http://localhost:8000/api/v1/alerts/stock/600519?check_types=all"
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Alerts for 600519 retrieved successfully",
+  "data": {
+    "stock_code": "600519",
+    "current_price": 1688.5,
+    "alerts": [],
+    "total_count": 0,
+    "check_time": "2026-03-25T14:30:00"
+  }
+}
+```
+
+### 3. 监控投资组合风险
+
+**接口**: `POST /api/v1/alerts/portfolio/monitor`
+**用途**: 主动监控投资组合风险，生成风险建议
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/alerts/portfolio/monitor
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Portfolio risk monitoring completed successfully",
+  "data": {
+    "alerts": [],
+    "summary": {
+      "total_alerts": 0,
+      "critical_alerts": 0,
+      "warning_alerts": 0,
+      "info_alerts": 0,
+      "check_time": "2026-03-25T14:30:00",
+      "recommendations": ["✅ 投资组合风险状况良好"]
+    }
+  }
+}
+```
+
+---
+
+# 六、回测系统
+
+## 🧪 回测系统接口
 
 ### 1. 单股回测
 
@@ -2309,114 +2449,6 @@ curl -X POST http://localhost:8000/api/v1/backtest/report \
 
 ---
 
-## 🔄 市场数据同步
-
-### 1. 同步股票列表
-
-**接口**: `POST /api/v1/market/stock/sync`
-**用途**: 同步股票列表到数据库
-
-**请求体**:
-```json
-{
-  "exchanges": ["SH", "SZ"],
-  "force_update": false
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/market/stock/sync \
-  -H "Content-Type: application/json" \
-  -d '{"exchanges": ["SH", "SZ"]}'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Stock sync task created",
-  "data": {
-    "task_id": "task_123",
-    "sync_type": "stock",
-    "status": {
-      "status": "pending",
-      "progress": 0,
-      "total_count": 0,
-      "completed_count": 0,
-      "failed_count": 0
-    }
-  }
-}
-```
-
-### 2. 同步状态
-
-**接口**: `GET /api/v1/market/stock/sync-status`
-**用途**: 获取股票同步状态
-
-**请求示例**:
-```bash
-curl http://localhost:8000/api/v1/market/stock/sync-status
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "Sync status retrieved",
-  "data": {}
-}
-```
-
-### 3. 同步单股K线
-
-**接口**: `POST /api/v1/market/kline/sync/{stock_code}`
-**用途**: 同步单只股票的历史K线数据
-
-**参数**:
-- `stock_code` (str): 股票代码
-
-**请求体**:
-```json
-{
-  "start_date": "2023-01-01",
-  "end_date": "2023-12-31",
-  "force_update": false
-}
-```
-
-**请求示例**:
-```bash
-curl -X POST http://localhost:8000/api/v1/market/kline/sync/600519 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "start_date": "2023-01-01",
-    "end_date": "2023-12-31"
-  }'
-```
-
-**响应示例**:
-```json
-{
-  "success": true,
-  "message": "KLine sync task created for 600519",
-  "data": {
-    "task_id": "task_600519",
-    "sync_type": "kline",
-    "status": {
-      "status": "pending",
-      "progress": 0,
-      "total_count": 0,
-      "completed_count": 0,
-      "failed_count": 0
-    }
-  }
-}
-```
-
----
-
 ## 📝 错误码
 
 | 状态码 | 说明 |
@@ -2501,4 +2533,4 @@ curl -H "X-API-Key: your-api-key-here" \
 
 ---
 
-*最后更新：2026-03-19*
+*最后更新：2026-03-25*
