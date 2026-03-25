@@ -61,6 +61,11 @@ async def lifespan(app: FastAPI):
     from common.database import DatabaseManager
     from common.config import get_config
 
+    # ✅ 导入所有模型模块，确保它们注册到 Base.metadata
+    import stock_market.models  # Stock, KLine, SyncRecord
+    import portfolio_manager.database  # Position, Transaction, CashBalance
+    import simulate_trading.models  # StrategyAccount, StrategyTrade, DailyReport
+
     config = get_config()
     db_url = config.get_database_url()
 
