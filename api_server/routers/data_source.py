@@ -2,7 +2,7 @@
 """数据源聚合路由"""
 
 from fastapi import APIRouter, Query, Path, HTTPException
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime
 
 from ..models.common import APIResponse
@@ -110,7 +110,7 @@ async def get_kline(
     )
     if klines_data is None:
         raise HTTPException(status_code=404, detail=f"KLine data not found for {stock_code}")
-    klines = [KLine(**k) for k in klines_data] if klines_data else []
+    klines = [KLine(**k) for k in klines_data]
     return APIResponse(
         data=KLineResponse(
             symbol=stock_code,
