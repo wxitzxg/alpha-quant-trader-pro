@@ -56,9 +56,10 @@ class InvestodayAdapter(DataSourceAdapter):
             )
 
         # 创建 HTTP 会话
+        # Investoday 使用 apiKey header 认证，不是 Authorization Bearer
         self._session = requests.Session()
         self._session.headers.update({
-            "Authorization": f"Bearer {self.api_key}",
+            "apiKey": self.api_key,
             "Content-Type": "application/json"
         })
 
@@ -115,9 +116,6 @@ class InvestodayAdapter(DataSourceAdapter):
         # 确保 params 是字典
         if params is None:
             params = {}
-        
-        # 添加 API Key 到请求参数
-        params["apiKey"] = self.api_key
 
         try:
             if method.upper() == "POST":
@@ -141,7 +139,9 @@ class InvestodayAdapter(DataSourceAdapter):
             result = response.json()
 
             # 检查 API 响应状态
-            if not result.get("success", False):
+            # Investoday 返回 code: 0 表示成功，其他值表示失败
+            code = result.get("code", -1)
+            if code != 0:
                 error_msg = result.get("message", "Unknown API error")
                 raise DataSourceError(
                     "investoday",
@@ -214,11 +214,11 @@ class InvestodayAdapter(DataSourceAdapter):
             Quote 对象
         """
         symbol = data.get("stockCode", "")
-        price = float(data.get("latestPrice", 0))
-        change = float(data.get("changeAmount", 0))
-        percent = float(data.get("changePercent", 0)) / 100  # 转换为小数
-        volume = int(data.get("volume", 0))
-        amount = float(data.get("amount", 0))
+        price = float(data.get("currentPrice", 0) or 0)
+        change_pct = float(data.get("changeRatio", 0) or 0)  # 涨跌幅（小数形式）
+        change = price * change_pct if price > 0 else 0  # 涨跌额 = 现价 * 涨跌幅
+        volume = int(data.get("dealStockAmount", 0) or 0)  # 成交量（手）
+        amount = float(data.get("dealMoney", 0) or 0)  # 成交额
 
         # Investoday 可能不提供买卖盘数据，使用空列表
         bid_price = []
@@ -230,7 +230,7 @@ class InvestodayAdapter(DataSourceAdapter):
             symbol=symbol,
             price=price,
             change=change,
-            percent=percent,
+            percent=change_pct,
             volume=volume,
             amount=amount,
             bid_price=bid_price,
@@ -319,15 +319,18 @@ class InvestodayAdapter(DataSourceAdapter):
         """
         symbol = data.get("stockCode", "")
         datetime_str = data.get("tradeDate", "")
+        # Investoday 返回格式: "2025-03-25 00:00:00"，需要截取日期部分
+        if " " in datetime_str:
+            datetime_str = datetime_str.split(" ")[0]
         datetime_obj = datetime.strptime(datetime_str, "%Y-%m-%d")
 
-        open_price = float(data.get("openPrice", 0))
-        high = float(data.get("highestPrice", 0))
-        low = float(data.get("lowestPrice", 0))
-        close = float(data.get("closePrice", 0))
-        volume = int(data.get("volume", 0))
-        amount = float(data.get("amount", 0))
-        turnover = float(data.get("turnoverRate", 0)) if data.get("turnoverRate") is not None else None
+        open_price = float(data.get("openPrice", 0) or 0)
+        high = float(data.get("highPrice", 0) or 0)  # Investoday 用 highPrice，不是 highestPrice
+        low = float(data.get("lowPrice", 0) or 0)    # Investoday 用 lowPrice，不是 lowestPrice
+        close = float(data.get("closePrice", 0) or 0)
+        volume = int(data.get("volume", 0) or 0)
+        amount = float(data.get("amount", 0) or 0)
+        turnover = float(data.get("turnover", 0)) if data.get("turnover") is not None else None
 
         return KLine(
             symbol=symbol,
@@ -381,7 +384,8 @@ class InvestodayAdapter(DataSourceAdapter):
                     }
                 )
 
-                items = data.get("items", [])
+                # Investoday 返回的 data 直接是列表，不是 {items: [...]}
+                items = data if isinstance(data, list) else data.get("items", [])
                 if not items:
                     break
 

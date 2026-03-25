@@ -30,21 +30,24 @@ class DataSourceService:
         try:
             quote = QuoteAPI.get_realtime(stock_code)
             if quote:
+                # Quote 模型来自 data_sources/models.py，字段映射如下:
+                # symbol, price, change, percent, volume, amount
+                exchange = "SH" if stock_code.startswith(('6', '9', '5')) else "SZ"
                 return {
-                    "ts_code": quote.ts_code or f"{stock_code}.SH",
+                    "ts_code": f"{stock_code}.{exchange}",
                     "symbol": stock_code,
-                    "name": quote.name or "Unknown",
-                    "current_price": float(quote.current_price or 0),
+                    "name": "",  # Quote 模型不包含名称
+                    "current_price": float(quote.price or 0),
                     "change": float(quote.change or 0),
-                    "change_pct": float(quote.change_pct or 0),
-                    "open": float(quote.open or 0),
-                    "high": float(quote.high or 0),
-                    "low": float(quote.low or 0),
-                    "close": float(quote.close or 0),
+                    "change_pct": float(quote.percent or 0),
+                    "open": 0.0,  # Quote 模型不包含开盘价
+                    "high": 0.0,  # Quote 模型不包含最高价
+                    "low": 0.0,   # Quote 模型不包含最低价
+                    "close": float(quote.price or 0),
                     "volume": int(quote.volume or 0),
                     "amount": float(quote.amount or 0),
-                    "turnover_rate": float(quote.turnover_rate or 0) if quote.turnover_rate else None,
-                    "update_time": datetime.now()
+                    "turnover_rate": None,
+                    "update_time": quote.timestamp or datetime.now()
                 }
         except Exception as e:
             print(f"Error getting quote for {stock_code}: {e}")
