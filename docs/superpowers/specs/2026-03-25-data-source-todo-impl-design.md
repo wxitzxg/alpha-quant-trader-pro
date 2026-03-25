@@ -174,17 +174,18 @@ class TopListAPI:
 
         quotes = aggregator.batch_get_realtime(symbols)
 
-        # 转换并排序
+        # 转换并排序（映射到 TopListEntry 模型）
+        # TopListEntry 需要: ts_code, symbol, name, change_pct, current_price, change, volume
         items = []
         for q in quotes:
             items.append({
+                "ts_code": f"{q.symbol}.SH",  # 根据代码推导交易所
                 "symbol": q.symbol,
                 "name": getattr(q, 'name', ''),
-                "price": q.price,
+                "current_price": q.price,       # Quote.price -> TopListEntry.current_price
                 "change": q.change,
                 "change_pct": q.percent * 100,
-                "volume": q.volume,
-                "amount": q.amount
+                "volume": q.volume
             })
 
         # 按涨跌幅排序
@@ -223,8 +224,8 @@ class KLineStatsAPI:
                 "lowest_price": {"price": 0, "date": ""}
             }
 
-        # 计算统计
-        prices = [k.price for k in klines]
+        # 计算统计（KLine 模型属性: close, datetime, open_price）
+        prices = [k.close for k in klines]  # 使用 close 而非 price
         volumes = [k.volume for k in klines]
 
         max_price_idx = prices.index(max(prices))
@@ -254,11 +255,11 @@ class KLineStatsAPI:
             "volatility": round(volatility, 2),
             "highest_price": {
                 "price": max(prices),
-                "date": str(klines[max_price_idx].date)
+                "date": str(klines[max_price_idx].datetime.date())  # 使用 datetime
             },
             "lowest_price": {
                 "price": min(prices),
-                "date": str(klines[min_price_idx].date)
+                "date": str(klines[min_price_idx].datetime.date())  # 使用 datetime
             }
         }
 ```
