@@ -6,7 +6,7 @@
 
 import logging
 import threading
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from .base import DataSourceAdapter
 from .registry import AdapterRegistry
 from .executor import FallbackExecutor
@@ -447,3 +447,120 @@ class FundamentalsAPI:
     def get_indicators(symbol: str, year: int, quarter: int) -> Dict[str, float]:
         aggregator = DataSourceAggregator()
         return aggregator.get_financial_indicators(symbol, year, quarter)
+
+
+class TopListAPI:
+    """涨跌排行 API - 带内存缓存"""
+
+    _cache: Dict[str, Tuple[List[Dict], float]] = {}
+    _cache_ttl: int = 60  # 缓存60秒
+
+    @staticmethod
+    def get(type: str, date: Optional[str] = None) -> List[Dict]:
+        import time
+        cache_key = f"toplist_{type}_{date}"
+        now = time.time()
+
+        # 检查缓存
+        if cache_key in TopListAPI._cache:
+            data, timestamp = TopListAPI._cache[cache_key]
+            if now - timestamp < TopListAPI._cache_ttl:
+                return data
+
+        # 获取所有股票行情
+        aggregator = DataSourceAggregator()
+        stocks = aggregator.get_stock_list()
+        symbols = [s['symbol'] for s in stocks[:500]]  # 限制前500只
+
+        quotes = aggregator.batch_get_realtime(symbols)
+
+        # 转换并排序（映射到 TopListEntry 模型）
+        # TopListEntry 需要: ts_code, symbol, name, change_pct, current_price, change, volume
+        items = []
+        for q in quotes:
+            items.append({
+                "ts_code": f"{q.symbol}.SH",  # 根据代码推导交易所
+                "symbol": q.symbol,
+                "name": getattr(q, 'name', ''),
+                "current_price": q.price,       # Quote.price -> TopListEntry.current_price
+                "change": q.change,
+                "change_pct": q.percent * 100,
+                "volume": q.volume
+            })
+
+        # 按涨跌幅排序
+        reverse = (type == "gain")  # 涨幅榜降序，跌幅榜升序
+        items.sort(key=lambda x: x["change_pct"], reverse=reverse)
+
+        # 更新缓存
+        TopListAPI._cache[cache_key] = (items[:100], now)
+        return items[:100]
+
+
+class KLineStatsAPI:
+    """K线统计 API"""
+
+    @staticmethod
+    def get(symbol: str, period: str = "1y") -> Dict:
+        from datetime import datetime, timedelta
+
+        # 计算日期范围
+        end_date = datetime.now().strftime("%Y-%m-%d")
+        days_map = {"1y": 365, "6m": 180, "3m": 90, "1m": 30}
+        days = days_map.get(period, 365)
+        start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+        # 获取K线数据
+        aggregator = DataSourceAggregator()
+        klines = aggregator.get_kline(symbol, "1d", start_date, end_date)
+
+        if not klines:
+            return {
+                "symbol": symbol,
+                "period": period,
+                "total_trading_days": 0,
+                "price_range": {"min": 0, "max": 0, "avg": 0},
+                "volume_stats": {"min": 0, "max": 0, "avg": 0, "total": 0},
+                "volatility": 0.0,
+                "highest_price": {"price": 0, "date": ""},
+                "lowest_price": {"price": 0, "date": ""}
+            }
+
+        # 计算统计（KLine 模型属性: close, datetime, open_price）
+        prices = [k.close for k in klines]  # 使用 close 而非 price
+        volumes = [k.volume for k in klines]
+
+        max_price_idx = prices.index(max(prices))
+        min_price_idx = prices.index(min(prices))
+
+        # 计算波动率（标准差）
+        avg_price = sum(prices) / len(prices)
+        variance = sum((p - avg_price) ** 2 for p in prices) / len(prices)
+        volatility = (variance ** 0.5) / avg_price * 100 if avg_price > 0 else 0
+
+        return {
+            "symbol": symbol,
+            "name": getattr(klines[0], 'name', ''),
+            "period": period,
+            "total_trading_days": len(klines),
+            "price_range": {
+                "min": min(prices),
+                "max": max(prices),
+                "avg": round(avg_price, 2)
+            },
+            "volume_stats": {
+                "min": min(volumes),
+                "max": max(volumes),
+                "avg": int(sum(volumes) / len(volumes)),
+                "total": sum(volumes)
+            },
+            "volatility": round(volatility, 2),
+            "highest_price": {
+                "price": max(prices),
+                "date": str(klines[max_price_idx].datetime.date())  # 使用 datetime
+            },
+            "lowest_price": {
+                "price": min(prices),
+                "date": str(klines[min_price_idx].datetime.date())  # 使用 datetime
+            }
+        }
