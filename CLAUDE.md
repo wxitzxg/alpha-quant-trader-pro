@@ -70,15 +70,8 @@ python -m ruff check .
 
 ### Key Patterns
 
-**Configuration**: Unified YAML + environment variable config in `common/config.py`. Priority: runtime params > env vars > .env > YAML > defaults. Environment variables use `__` delimiter for nested config (e.g., `DATABASE__URL`).
+**Database**: All models inherit from `common.database.Base`. Tables are auto-created at startup via `Base.metadata.create_all()` in `api_server/main.py`. Models must be imported before `create_all()` is called.
 
-```python
-from common.config import get_config
-config = get_config()
-db_url = config.database.url
-```
-
-**Database**: All models inherit from `common.database.Base`. Tables are auto-created at startup via `Base.metadata.create_all()` in `api_server/main.py`. **Models must be imported before `create_all()` is called.**
 
 **Repository Pattern**: Database access via repositories in `{module}/repositories/`. Base class at `common/repositories/base.py`.
 

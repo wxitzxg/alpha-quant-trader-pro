@@ -172,7 +172,6 @@ pip install -r requirements.txt
 - fastapi - Web framework
 - sqlalchemy - ORM
 - psycopg2-binary - PostgreSQL driver
-- alembic - Database migrations
 - pandas - Data analysis
 - numpy - Numerical computing
 - tushare - Chinese stock data
@@ -217,13 +216,13 @@ REDIS__URL=redis://localhost:6379/0
 ### Step 7: Initialize Database
 
 ```bash
-# Run database migrations
-alembic upgrade head
+# Start the API server - tables are auto-created on startup
+python -m api_server.main
+# You should see: "数据库表同步完成"
 ```
 
 This will:
 - Create all necessary tables
-- Set up indexes
 - Initialize system data
 
 ---
@@ -425,9 +424,9 @@ python test_installation.py
 
 ---
 
-### Issue: Database Migration Failed
+### Issue: Database Initialization Failed
 
-**Symptoms**: `alembic upgrade head` fails
+**Symptoms**: Tables not created on startup
 
 **Solutions**:
 1. Drop and recreate database:
@@ -437,7 +436,8 @@ python test_installation.py
    CREATE DATABASE stock_market;
    GRANT ALL PRIVILEGES ON DATABASE stock_market TO stock_user;
    \q
-   alembic upgrade head
+   # Restart API server to recreate tables
+   python -m api_server.main
    ```
 2. Check database user has correct permissions
 3. Review error logs for specific issues

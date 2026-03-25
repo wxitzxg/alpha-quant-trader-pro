@@ -292,13 +292,11 @@ CREATE USER alphaquant WITH PASSWORD 'your_secure_password';
 GRANT ALL PRIVILEGES ON DATABASE stock_market TO alphaquant;
 EOF
 
-# Run database migrations
+# Initialize database tables (auto-created on first startup)
 source venv/bin/activate
-alembic upgrade head
-
-# Verify migrations
-alembic current
-# Should show: head (all migrations applied)
+# Tables are automatically created when API server starts
+# Alternatively, run a quick test to verify database connection:
+python -c "from common.database import DatabaseManager; from common.config import get_config; db = DatabaseManager(get_config().get_database_url()); db.create_all(); print('Database tables created successfully')"
 ```
 
 ### Step 5: Install and Configure Services
@@ -685,8 +683,7 @@ docker-compose -f docker-compose.production.yml ps
 # View logs
 docker-compose -f docker-compose.production.yml logs -f
 
-# Run database migrations
-docker-compose -f docker-compose.production.yml exec app alembic upgrade head
+# Database tables are auto-created on first API startup
 
 # Test service
 curl http://localhost:8000/health

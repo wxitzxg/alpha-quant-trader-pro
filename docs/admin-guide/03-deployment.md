@@ -328,17 +328,18 @@ GRANT ALL PRIVILEGES ON DATABASE stock_market TO alphaquant;
 \q
 ```
 
-### Step 4: Run Database Migrations
+### Step 4: Initialize Database Tables
 
 ```bash
 # Activate virtual environment
 source venv/bin/activate
 
-# Run migrations
-alembic upgrade head
-
-# Verify migrations
-alembic current
+# Start API server - tables are auto-created on startup
+python -m api_server.main &
+# Wait for initialization
+sleep 5
+# Verify tables were created
+psql -U alphaquant -d stock_market -c "\dt"
 ```
 
 ### Step 5: Configure Database Backup
