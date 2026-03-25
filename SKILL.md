@@ -317,10 +317,12 @@ curl http://localhost:8000/api/v1/kline/stats/600519?period=1y
 }
 ```
 
-### 9. 财务指标
+### 9. 财务指标（简化版）
 
 **接口**: `GET /api/v1/financial/indicators/{stock_code}`
-**用途**: 获取股票的财务指标（简化版）
+**用途**: 获取股票的财务指标（简化版，适用于快速查询）
+
+> **注意**: 如需分页查询和更详细的财务指标数据，请使用 [财务数据 - 财务指标](#4-财务指标) 接口。
 
 **参数**:
 - `stock_code` (str): 股票代码
@@ -1884,6 +1886,49 @@ curl "http://localhost:8000/api/v1/portfolio/transactions?page=1&page_size=20"
     "page": 1,
     "page_size": 20,
     "total_pages": 0
+  }
+}
+```
+
+### 9. 同步持仓
+
+**接口**: `POST /api/v1/portfolio/positions/sync`
+**用途**: 同步持仓信息（存在则覆盖，不存在则新增）
+
+**请求体**:
+```json
+{
+  "stock_code": "600519",
+  "quantity": 100,
+  "cost_price": 1688.5,
+  "current_price": 1700.0
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/portfolio/positions/sync \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stock_code": "600519",
+    "quantity": 100,
+    "cost_price": 1688.5,
+    "current_price": 1700.0
+  }'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Position synced successfully",
+  "data": {
+    "symbol": "600519",
+    "quantity": 100,
+    "cost_price": 1688.5,
+    "current_price": 1700.0,
+    "market_value": 170000.0,
+    "floating_pl": 1150.0
   }
 }
 ```
