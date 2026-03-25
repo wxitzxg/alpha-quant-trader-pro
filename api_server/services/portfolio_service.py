@@ -8,6 +8,7 @@ sys.path.insert(0, '.')
 from typing import Optional, List, Dict
 from datetime import datetime
 from decimal import Decimal
+from contextlib import contextmanager
 
 from common.database import DatabaseManager
 from portfolio_manager.repositories import (
@@ -39,8 +40,9 @@ class PortfolioService:
         self.db_url = db_url or os.getenv("DATABASE__URL", "postgresql://localhost/stock_market")
         self.db_manager = DatabaseManager(self.db_url)
 
+    @contextmanager
     def _get_services(self):
-        """获取服务实例"""
+        """获取服务实例（上下文管理器）"""
         with self.db_manager.get_session() as session:
             # 初始化 repositories
             position_repo = PositionRepository(session)
@@ -59,7 +61,7 @@ class PortfolioService:
                 fee_calculator=fee_calculator
             )
 
-            return (
+            yield (
                 session,
                 position_service,
                 transaction_service,
@@ -75,22 +77,21 @@ class PortfolioService:
             账户汇总响应
         """
         try:
-            _, _, _, account_service, _ = self._get_services()
+            with self._get_services() as (_, _, _, account_service, _):
+                summary = account_service.get_account_summary()
 
-            summary = account_service.get_account_summary()
-
-            return {
-                "success": True,
-                "data": {
-                    "total_market_value": summary.total_market_value,
-                    "stock_market_value": summary.stock_market_value,
-                    "cash": summary.cash,
-                    "total_floating_pl": summary.total_floating_pl,
-                    "total_realized_pl": summary.total_realized_pl,
-                    "positions_count": summary.positions_count
-                },
-                "message": "Account summary retrieved successfully"
-            }
+                return {
+                    "success": True,
+                    "data": {
+                        "total_market_value": summary.total_market_value,
+                        "stock_market_value": summary.stock_market_value,
+                        "cash": summary.cash,
+                        "total_floating_pl": summary.total_floating_pl,
+                        "total_realized_pl": summary.total_realized_pl,
+                        "positions_count": summary.positions_count
+                    },
+                    "message": "Account summary retrieved successfully"
+                }
         except Exception as e:
             return {
                 "success": False,
@@ -109,31 +110,30 @@ class PortfolioService:
             持仓信息
         """
         try:
-            _, position_service, _, _, _ = self._get_services()
+            with self._get_services() as (_, position_service, _, _, _):
+                position = position_service.get_position(symbol)
 
-            position = position_service.get_position(symbol)
+                if not position:
+                    return {
+                        "success": False,
+                        "message": f"Position {symbol} not found"
+                    }
 
-            if not position:
                 return {
-                    "success": False,
-                    "message": f"Position {symbol} not found"
+                    "success": True,
+                    "data": {
+                        "symbol": position.symbol,
+                        "quantity": position.quantity,
+                        "cost_price": position.cost_price,
+                        "current_price": position.current_price,
+                        "market_value": position.market_value,
+                        "cost_value": position.cost_value,
+                        "floating_pl": position.floating_pl,
+                        "position_ratio": position.position_ratio,
+                        "last_updated": position.last_updated.isoformat()
+                    },
+                    "message": "Position retrieved successfully"
                 }
-
-            return {
-                "success": True,
-                "data": {
-                    "symbol": position.symbol,
-                    "quantity": position.quantity,
-                    "cost_price": position.cost_price,
-                    "current_price": position.current_price,
-                    "market_value": position.market_value,
-                    "cost_value": position.cost_value,
-                    "floating_pl": position.floating_pl,
-                    "position_ratio": position.position_ratio,
-                    "last_updated": position.last_updated.isoformat()
-                },
-                "message": "Position retrieved successfully"
-            }
         except Exception as e:
             return {
                 "success": False,
@@ -153,37 +153,36 @@ class PortfolioService:
             持仓列表
         """
         try:
-            _, position_service, _, _, _ = self._get_services()
+            with self._get_services() as (_, position_service, _, _, _):
+                positions = position_service.get_all_positions()
 
-            positions = position_service.get_all_positions()
+                # 分页
+                start = (page - 1) * page_size
+                end = start + page_size
+                paginated_positions = positions[start:end]
 
-            # 分页
-            start = (page - 1) * page_size
-            end = start + page_size
-            paginated_positions = positions[start:end]
-
-            return {
-                "success": True,
-                "data": [
-                    {
-                        "symbol": p.symbol,
-                        "quantity": p.quantity,
-                        "cost_price": p.cost_price,
-                        "current_price": p.current_price,
-                        "market_value": p.market_value,
-                        "cost_value": p.cost_value,
-                        "floating_pl": p.floating_pl,
-                        "position_ratio": p.position_ratio,
-                        "last_updated": p.last_updated.isoformat()
-                    }
-                    for p in paginated_positions
-                ],
-                "total": len(positions),
-                "page": page,
-                "page_size": page_size,
-                "total_pages": (len(positions) + page_size - 1) // page_size,
-                "message": "Positions retrieved successfully"
-            }
+                return {
+                    "success": True,
+                    "data": [
+                        {
+                            "symbol": p.symbol,
+                            "quantity": p.quantity,
+                            "cost_price": p.cost_price,
+                            "current_price": p.current_price,
+                            "market_value": p.market_value,
+                            "cost_value": p.cost_value,
+                            "floating_pl": p.floating_pl,
+                            "position_ratio": p.position_ratio,
+                            "last_updated": p.last_updated.isoformat()
+                        }
+                        for p in paginated_positions
+                    ],
+                    "total": len(positions),
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": (len(positions) + page_size - 1) // page_size,
+                    "message": "Positions retrieved successfully"
+                }
         except Exception as e:
             return {
                 "success": False,
@@ -211,29 +210,28 @@ class PortfolioService:
             持仓信息
         """
         try:
-            _, position_service, _, _, _ = self._get_services()
+            with self._get_services() as (_, position_service, _, _, _):
+                position = position_service.add_position(
+                    symbol=symbol,
+                    quantity=quantity,
+                    cost_price=cost_price,
+                    current_price=current_price
+                )
 
-            position = position_service.add_position(
-                symbol=symbol,
-                quantity=quantity,
-                cost_price=cost_price,
-                current_price=current_price
-            )
-
-            return {
-                "success": True,
-                "data": {
-                    "symbol": position.symbol,
-                    "quantity": position.quantity,
-                    "cost_price": position.cost_price,
-                    "current_price": position.current_price,
-                    "market_value": position.market_value,
-                    "cost_value": position.cost_value,
-                    "floating_pl": position.floating_pl,
-                    "last_updated": position.last_updated.isoformat()
-                },
-                "message": f"Position {symbol} added successfully"
-            }
+                return {
+                    "success": True,
+                    "data": {
+                        "symbol": position.symbol,
+                        "quantity": position.quantity,
+                        "cost_price": position.cost_price,
+                        "current_price": position.current_price,
+                        "market_value": position.market_value,
+                        "cost_value": position.cost_value,
+                        "floating_pl": position.floating_pl,
+                        "last_updated": position.last_updated.isoformat()
+                    },
+                    "message": f"Position {symbol} added successfully"
+                }
         except Exception as e:
             return {
                 "success": False,
@@ -261,29 +259,28 @@ class PortfolioService:
             持仓信息
         """
         try:
-            _, position_service, _, _, _ = self._get_services()
+            with self._get_services() as (_, position_service, _, _, _):
+                position = position_service.update_position(
+                    symbol=symbol,
+                    quantity=quantity,
+                    cost_price=cost_price,
+                    current_price=current_price
+                )
 
-            position = position_service.update_position(
-                symbol=symbol,
-                quantity=quantity,
-                cost_price=cost_price,
-                current_price=current_price
-            )
-
-            return {
-                "success": True,
-                "data": {
-                    "symbol": position.symbol,
-                    "quantity": position.quantity,
-                    "cost_price": position.cost_price,
-                    "current_price": position.current_price,
-                    "market_value": position.market_value,
-                    "cost_value": position.cost_value,
-                    "floating_pl": position.floating_pl,
-                    "last_updated": position.last_updated.isoformat()
-                },
-                "message": f"Position {symbol} updated successfully"
-            }
+                return {
+                    "success": True,
+                    "data": {
+                        "symbol": position.symbol,
+                        "quantity": position.quantity,
+                        "cost_price": position.cost_price,
+                        "current_price": position.current_price,
+                        "market_value": position.market_value,
+                        "cost_value": position.cost_value,
+                        "floating_pl": position.floating_pl,
+                        "last_updated": position.last_updated.isoformat()
+                    },
+                    "message": f"Position {symbol} updated successfully"
+                }
         except Exception as e:
             return {
                 "success": False,
@@ -315,29 +312,28 @@ class PortfolioService:
             }
         """
         try:
-            _, position_service, _, _, _ = self._get_services()
+            with self._get_services() as (_, position_service, _, _, _):
+                position = position_service.sync_position(
+                    symbol=symbol,
+                    quantity=quantity,
+                    cost_price=cost_price,
+                    current_price=current_price
+                )
 
-            position = position_service.sync_position(
-                symbol=symbol,
-                quantity=quantity,
-                cost_price=cost_price,
-                current_price=current_price
-            )
-
-            return {
-                "success": True,
-                "data": {
-                    "symbol": position.symbol,
-                    "quantity": position.quantity,
-                    "cost_price": position.cost_price,
-                    "current_price": position.current_price,
-                    "market_value": position.market_value,
-                    "cost_value": position.cost_value,
-                    "floating_pl": position.floating_pl,
-                    "last_updated": position.last_updated.isoformat()
-                },
-                "message": f"Position {symbol} synced successfully"
-            }
+                return {
+                    "success": True,
+                    "data": {
+                        "symbol": position.symbol,
+                        "quantity": position.quantity,
+                        "cost_price": position.cost_price,
+                        "current_price": position.current_price,
+                        "market_value": position.market_value,
+                        "cost_value": position.cost_value,
+                        "floating_pl": position.floating_pl,
+                        "last_updated": position.last_updated.isoformat()
+                    },
+                    "message": f"Position {symbol} synced successfully"
+                }
         except Exception as e:
             return {
                 "success": False,
@@ -365,33 +361,32 @@ class PortfolioService:
             交易记录
         """
         try:
-            _, _, transaction_service, _, _ = self._get_services()
+            with self._get_services() as (_, _, transaction_service, _, _):
+                # 转换日期格式
+                date_obj = None
+                if transaction_date:
+                    date_obj = datetime.fromisoformat(transaction_date)
 
-            # 转换日期格式
-            date_obj = None
-            if transaction_date:
-                date_obj = datetime.fromisoformat(transaction_date)
+                transaction = transaction_service.record_buy(
+                    symbol=symbol,
+                    quantity=quantity,
+                    price=price,
+                    transaction_date=date_obj
+                )
 
-            transaction = transaction_service.record_buy(
-                symbol=symbol,
-                quantity=quantity,
-                price=price,
-                transaction_date=date_obj
-            )
-
-            return {
-                "success": True,
-                "data": {
-                    "symbol": transaction.symbol,
-                    "transaction_type": transaction.transaction_type,
-                    "quantity": transaction.quantity,
-                    "price": transaction.price,
-                    "amount": transaction.amount,
-                    "fee": transaction.fee,
-                    "transaction_date": transaction.transaction_date.isoformat()
-                },
-                "message": f"Buy transaction for {symbol} recorded successfully"
-            }
+                return {
+                    "success": True,
+                    "data": {
+                        "symbol": transaction.symbol,
+                        "transaction_type": transaction.transaction_type,
+                        "quantity": transaction.quantity,
+                        "price": transaction.price,
+                        "amount": transaction.amount,
+                        "fee": transaction.fee,
+                        "transaction_date": transaction.transaction_date.isoformat()
+                    },
+                    "message": f"Buy transaction for {symbol} recorded successfully"
+                }
         except Exception as e:
             return {
                 "success": False,
@@ -419,33 +414,32 @@ class PortfolioService:
             交易记录
         """
         try:
-            _, _, transaction_service, _, _ = self._get_services()
+            with self._get_services() as (_, _, transaction_service, _, _):
+                # 转换日期格式
+                date_obj = None
+                if transaction_date:
+                    date_obj = datetime.fromisoformat(transaction_date)
 
-            # 转换日期格式
-            date_obj = None
-            if transaction_date:
-                date_obj = datetime.fromisoformat(transaction_date)
+                transaction = transaction_service.record_sell(
+                    symbol=symbol,
+                    quantity=quantity,
+                    price=price,
+                    transaction_date=date_obj
+                )
 
-            transaction = transaction_service.record_sell(
-                symbol=symbol,
-                quantity=quantity,
-                price=price,
-                transaction_date=date_obj
-            )
-
-            return {
-                "success": True,
-                "data": {
-                    "symbol": transaction.symbol,
-                    "transaction_type": transaction.transaction_type,
-                    "quantity": transaction.quantity,
-                    "price": transaction.price,
-                    "amount": transaction.amount,
-                    "fee": transaction.fee,
-                    "transaction_date": transaction.transaction_date.isoformat()
-                },
-                "message": f"Sell transaction for {symbol} recorded successfully"
-            }
+                return {
+                    "success": True,
+                    "data": {
+                        "symbol": transaction.symbol,
+                        "transaction_type": transaction.transaction_type,
+                        "quantity": transaction.quantity,
+                        "price": transaction.price,
+                        "amount": transaction.amount,
+                        "fee": transaction.fee,
+                        "transaction_date": transaction.transaction_date.isoformat()
+                    },
+                    "message": f"Sell transaction for {symbol} recorded successfully"
+                }
         except Exception as e:
             return {
                 "success": False,
@@ -475,47 +469,46 @@ class PortfolioService:
             交易历史列表
         """
         try:
-            _, _, transaction_service, _, _ = self._get_services()
+            with self._get_services() as (_, _, transaction_service, _, _):
+                # 转换日期格式
+                start_date_obj = None
+                end_date_obj = None
+                if start_date:
+                    start_date_obj = datetime.fromisoformat(start_date)
+                if end_date:
+                    end_date_obj = datetime.fromisoformat(end_date)
 
-            # 转换日期格式
-            start_date_obj = None
-            end_date_obj = None
-            if start_date:
-                start_date_obj = datetime.fromisoformat(start_date)
-            if end_date:
-                end_date_obj = datetime.fromisoformat(end_date)
+                transactions = transaction_service.get_transaction_history(
+                    symbol=symbol,
+                    start_date=start_date_obj,
+                    end_date=end_date_obj
+                )
 
-            transactions = transaction_service.get_transaction_history(
-                symbol=symbol,
-                start_date=start_date_obj,
-                end_date=end_date_obj
-            )
+                # 分页
+                start = (page - 1) * page_size
+                end = start + page_size
+                paginated_transactions = transactions[start:end]
 
-            # 分页
-            start = (page - 1) * page_size
-            end = start + page_size
-            paginated_transactions = transactions[start:end]
-
-            return {
-                "success": True,
-                "data": [
-                    {
-                        "symbol": t.symbol,
-                        "transaction_type": t.transaction_type,
-                        "quantity": t.quantity,
-                        "price": t.price,
-                        "amount": t.amount,
-                        "fee": t.fee,
-                        "transaction_date": t.transaction_date.isoformat()
-                    }
-                    for t in paginated_transactions
-                ],
-                "total": len(transactions),
-                "page": page,
-                "page_size": page_size,
-                "total_pages": (len(transactions) + page_size - 1) // page_size,
-                "message": "Transaction history retrieved successfully"
-            }
+                return {
+                    "success": True,
+                    "data": [
+                        {
+                            "symbol": t.symbol,
+                            "transaction_type": t.transaction_type,
+                            "quantity": t.quantity,
+                            "price": t.price,
+                            "amount": t.amount,
+                            "fee": t.fee,
+                            "transaction_date": t.transaction_date.isoformat()
+                        }
+                        for t in paginated_transactions
+                    ],
+                    "total": len(transactions),
+                    "page": page,
+                    "page_size": page_size,
+                    "total_pages": (len(transactions) + page_size - 1) // page_size,
+                    "message": "Transaction history retrieved successfully"
+                }
         except Exception as e:
             return {
                 "success": False,
@@ -531,17 +524,16 @@ class PortfolioService:
             现金余额
         """
         try:
-            _, _, _, account_service, _ = self._get_services()
+            with self._get_services() as (_, _, _, account_service, _):
+                cash = account_service.get_cash_balance()
 
-            cash = account_service.get_cash_balance()
-
-            return {
-                "success": True,
-                "data": {
-                    "cash": cash
-                },
-                "message": "Cash balance retrieved successfully"
-            }
+                return {
+                    "success": True,
+                    "data": {
+                        "cash": cash
+                    },
+                    "message": "Cash balance retrieved successfully"
+                }
         except Exception as e:
             return {
                 "success": False,
@@ -560,14 +552,16 @@ class PortfolioService:
             操作结果
         """
         try:
-            _, _, _, account_service, _ = self._get_services()
+            with self._get_services() as (_, _, _, account_service, _):
+                account_service.set_cash_balance(amount)
 
-            account_service.set_cash_balance(amount)
-
-            return {
-                "success": True,
-                "message": f"Cash balance set to {amount}"
-            }
+                return {
+                    "success": True,
+                    "data": {
+                        "amount": amount
+                    },
+                    "message": f"Cash balance set to {amount}"
+                }
         except Exception as e:
             return {
                 "success": False,

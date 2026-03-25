@@ -2,6 +2,7 @@
 
 from typing import List, Optional
 from datetime import datetime, timedelta
+from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import select, and_, func
 from common.repositories.base import BaseRepository
