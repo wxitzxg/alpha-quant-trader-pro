@@ -102,8 +102,13 @@ class DataSourceAggregator:
 
     def _initialize_adapters(self):
         """初始化所有适配器"""
+        import os
+        
         # 自动发现适配器类
         self.registry.auto_discover()
+
+        # 从环境变量读取 API tokens
+        tushare_token = os.getenv('TUSHARE_TOKEN', '')
 
         # 根据配置创建适配器实例
         for category, sources in self.config.get('sources', {}).items():
@@ -117,11 +122,18 @@ class DataSourceAggregator:
                         continue
 
                     try:
+                        # 准备适配器参数
+                        adapter_kwargs = {
+                            'timeout': source_cfg.get('timeout', 5)
+                        }
+                        
+                        # 根据适配器类型添加特定参数
+                        # 注意：InvestodayAdapter 从环境变量读取 INVESTODAY_API_KEY
+                        if source_name == 'tushare' and tushare_token:
+                            adapter_kwargs['token'] = tushare_token
+
                         # 创建适配器实例
-                        adapter = self.registry.create_adapter(
-                            source_name,
-                            timeout=source_cfg.get('timeout', 5)
-                        )
+                        adapter = self.registry.create_adapter(source_name, **adapter_kwargs)
 
                         # 使用 property setter 设置优先级（方案 3A）
                         adapter.priority = source_cfg.get('priority', 100)

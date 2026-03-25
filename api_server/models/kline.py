@@ -61,7 +61,7 @@ class BatchKLineResponse(BaseModel):
 class KLineStats(BaseModel):
     """K线统计信息"""
     symbol: str
-    name: str
+    name: str = ""  # 股票名称，可选（无数据时为空）
     period: str
     total_trading_days: int
     price_range: dict = Field(..., description="价格范围 {min, max, avg}")
