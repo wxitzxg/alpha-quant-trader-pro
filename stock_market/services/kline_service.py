@@ -55,6 +55,14 @@ class KLineService:
 
         aggregator = DataSourceAggregator()
 
+        # 获取股票信息（用于 stock_id）
+        stock = self.stock_repo.get_by_symbol(symbol)
+        if not stock:
+            logger.error(f"Stock {symbol} not found in database. Please sync stock list first.")
+            return 0
+
+        stock_id = stock.id
+
         # 确定同步时间范围
         if start_date is None:
             # 增量同步：从最后同步时间开始
@@ -103,7 +111,7 @@ class KLineService:
                     existing_kline = existing[0]
                     if force_update:
                         # 更新现有记录
-                        existing_kline.open = kline.open
+                        existing_kline.open = kline.open_price
                         existing_kline.high = kline.high
                         existing_kline.low = kline.low
                         existing_kline.close = kline.close
@@ -115,10 +123,11 @@ class KLineService:
                 else:
                     # 新增K线
                     new_kline = KLine(
+                        stock_id=stock_id,
                         symbol=symbol,
                         date=kline_date,
                         interval=interval,
-                        open=kline.open,
+                        open=kline.open_price,
                         high=kline.high,
                         low=kline.low,
                         close=kline.close,
@@ -134,6 +143,14 @@ class KLineService:
             except Exception as e:
                 logger.error(f"Failed to save kline for {symbol} on {kline.datetime}: {e}")
                 continue
+
+        # 提交事务
+        try:
+            self.repo.session.commit()
+        except Exception as e:
+            logger.error(f"Failed to commit transaction: {e}")
+            self.repo.session.rollback()
+            return 0
 
         # 记录同步日志
         self._log_sync(

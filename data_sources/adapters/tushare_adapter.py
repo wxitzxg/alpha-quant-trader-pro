@@ -42,19 +42,11 @@ class TushareAdapter(DataSourceAdapter):
         Check if Tushare API is available
 
         Returns:
-            True if API token is valid and service is reachable
+            True if API token is configured
         """
-        try:
-            # Test API connectivity with a lightweight call
-            self.pro.stock_basic(
-                ts_code="600519.SH",
-                fields="ts_code",
-                limit=1
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Tushare health check failed: {e}")
-            return False
+        # 免费版 Tushare 有严格的 API 频率限制
+        # 健康检查会消耗配额，因此只检查 token 是否配置
+        return self.token is not None and len(self.token) > 0
 
     @property
     def name(self) -> str:
