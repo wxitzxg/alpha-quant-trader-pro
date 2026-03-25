@@ -13,10 +13,10 @@ class StockSyncParams(BaseModel):
 
 class KLineSyncParams(BaseModel):
     """K线同步参数"""
-    stock_code: str = Field(..., description="股票代码")
     interval: str = Field("1d", description="周期 (1d/1w/1m)")
     start_date: Optional[str] = Field(None, description="开始日期")
     end_date: Optional[str] = Field(None, description="结束日期")
+    force_update: bool = Field(False, description="强制更新")
 
 
 class SyncStatus(BaseModel):
