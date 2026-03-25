@@ -201,10 +201,8 @@ class DataSourceService:
         try:
             now = datetime.now()
             year = now.year
+            # 计算当前季度：(month-1)//3+1 结果范围 1-4
             quarter = (now.month - 1) // 3 + 1
-            if quarter == 0:
-                quarter = 4
-                year -= 1
 
             indicators = FundamentalsAPI.get_indicators(stock_code, year, quarter)
             if indicators:
