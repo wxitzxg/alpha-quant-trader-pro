@@ -196,8 +196,8 @@
 # Update dependencies
 pip install -r requirements.txt --upgrade
 
-# Run database migrations
-alembic upgrade head
+# Start API server - tables are auto-created/updated on startup
+python -m api_server.main
 
 # Restart application
 # ...

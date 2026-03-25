@@ -157,7 +157,7 @@ pytest tests/ -v --cov=stock_market
 - [ ] 安装依赖: `pip install -r requirements.txt`
 - [ ] 创建数据库: `createdb stock_market`
 - [ ] 配置环境变量: `export DATABASE__URL=...`
-- [ ] 运行迁移: `alembic upgrade head`
+- [ ] 启动 API 服务（表自动创建）: `python -m api_server.main`
 - [ ] 运行测试: `pytest tests/ -v`
 - [ ] 查看示例: `python examples/usage.py`
 

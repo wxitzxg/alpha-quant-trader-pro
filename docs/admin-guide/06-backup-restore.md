@@ -92,10 +92,9 @@ psql -U postgres -c "CREATE DATABASE stock_market OWNER alphaquant;"
 # Step 3: Restore from backup
 gunzip -c /backup/postgresql/stock_market_20260318_020000.sql.gz | psql -U alphaquant stock_market
 
-# Step 4: Run migrations
+# Step 4: Start application (tables auto-created if needed)
 cd /opt/alpha-quant
 source venv/bin/activate
-alembic upgrade head
 
 # Step 5: Start application
 sudo systemctl start alphaquant

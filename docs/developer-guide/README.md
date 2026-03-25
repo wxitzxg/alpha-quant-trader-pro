@@ -175,8 +175,8 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your settings
 
-# Run migrations
-alembic upgrade head
+# Start API server (tables auto-created on startup)
+python -m api_server.main
 ```
 
 ### 2. Development
