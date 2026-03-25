@@ -19,35 +19,45 @@ data_sources:
   sources:
     # ====== 行情数据源 ======
     realtime:
+      - name: "investoday"
+        priority: 10
+        enabled: true
+        timeout: 3
+
       - name: "sina"           # 源名称
-        priority: 10           # 优先级（数字越小优先级越高）
+        priority: 20           # 优先级（数字越小优先级越高）
         enabled: true          # 是否启用
         timeout: 3             # 该源的特定超时时间（秒）
 
       - name: "akshare"
-        priority: 20
+        priority: 30
         enabled: true
         timeout: 5
 
       - name: "tushare"
-        priority: 30
+        priority: 40
         enabled: true
         timeout: 5
 
     # ====== K线数据源 ======
     kline:
-      - name: "tushare"
+      - name: "investoday"
         priority: 10
         enabled: true
         timeout: 10
 
-      - name: "akshare"
+      - name: "tushare"
         priority: 20
         enabled: true
         timeout: 10
 
-      - name: "sina"
+      - name: "akshare"
         priority: 30
+        enabled: true
+        timeout: 10
+
+      - name: "sina"
+        priority: 40
         enabled: true
         timeout: 5
 
@@ -182,5 +192,34 @@ data_sources:
     dupont_analysis:
       - name: "investoday"
         priority: 10
+        enabled: true
+        timeout: 15
+
+    # ====== 股票列表数据源 ======
+    stock_list:
+      - name: "akshare"
+        priority: 10
+        enabled: true
+        timeout: 15
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 10
+
+    # ====== 财务报表数据源 ======
+    financial_statements:
+      - name: "investoday"
+        priority: 10
+        enabled: true
+        timeout: 15
+
+      - name: "tushare"
+        priority: 20
+        enabled: true
+        timeout: 15
+
+      - name: "akshare"
+        priority: 30
         enabled: true
         timeout: 15

@@ -76,8 +76,7 @@ class InvestodayAdapter(DataSourceAdapter):
             self._call_api(
                 endpoint="stock-quote/realtime",
                 method="GET",
-                params={"stockCode": "600519"},
-                timeout=5
+                params={"stockCode": "600519"}
             )
             return True
         except Exception as e:
@@ -112,6 +111,13 @@ class InvestodayAdapter(DataSourceAdapter):
             DataSourceError: API 调用失败或返回错误
         """
         url = f"{self.base_url}/{endpoint}"
+
+        # 确保 params 是字典
+        if params is None:
+            params = {}
+        
+        # 添加 API Key 到请求参数
+        params["apiKey"] = self.api_key
 
         try:
             if method.upper() == "POST":
