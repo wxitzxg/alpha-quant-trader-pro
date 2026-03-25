@@ -117,6 +117,31 @@ class KLineRepository(BaseRepository[KLine]):
         latest = self.get_latest_by_symbol(symbol, interval)
         return latest.date if latest else None
 
+    def query_klines(self, params) -> List[KLine]:
+        """
+        根据查询参数获取K线数据
+
+        Args:
+            params: KLineQuerySchema 查询参数
+
+        Returns:
+            K线数据列表
+        """
+        stmt = select(KLine).filter(
+            KLine.symbol == params.symbol,
+            KLine.interval == params.interval
+        )
+
+        if params.start_date:
+            stmt = stmt.filter(KLine.date >= params.start_date)
+        if params.end_date:
+            stmt = stmt.filter(KLine.date <= params.end_date)
+
+        stmt = stmt.order_by(KLine.date.desc()).limit(params.limit)
+
+        result = self.session.execute(stmt).scalars().all()
+        return list(reversed(list(result)))  # 按时间正序返回
+
     def bulk_insert(self, klines: List[KLine]) -> int:
         """
         批量插入K线数据

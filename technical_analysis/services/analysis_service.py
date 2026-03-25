@@ -272,19 +272,34 @@ class AnalysisService:
         Returns:
             pandas DataFrame
         """
+        if not klines:
+            return pd.DataFrame()
+
         data = []
         for kline in klines:
+            # 支持两种字段名格式
+            open_price = getattr(kline, 'open_price', None) or getattr(kline, 'open', 0)
+            high_price = getattr(kline, 'high_price', None) or getattr(kline, 'high', 0)
+            low_price = getattr(kline, 'low_price', None) or getattr(kline, 'low', 0)
+            close_price = getattr(kline, 'close_price', None) or getattr(kline, 'close', 0)
+            volume = getattr(kline, 'volume', 0) or 0
+            date_val = getattr(kline, 'timestamp', None) or getattr(kline, 'date', None)
+
             data.append({
-                'open': kline.open_price,
-                'high': kline.high_price,
-                'low': kline.low_price,
-                'close': kline.close_price,
-                'volume': kline.volume,
-                'timestamp': kline.timestamp
+                'open': float(open_price) if open_price else 0,
+                'high': float(high_price) if high_price else 0,
+                'low': float(low_price) if low_price else 0,
+                'close': float(close_price) if close_price else 0,
+                'volume': int(volume) if volume else 0,
+                'date': date_val
             })
 
         df = pd.DataFrame(data)
-        if 'timestamp' in df.columns:
-            df.set_index('timestamp', inplace=True)
+
+        # 设置日期索引
+        if 'date' in df.columns and not df.empty:
+            df = df.set_index('date')
+            # 确保索引是排序的
+            df = df.sort_index()
 
         return df

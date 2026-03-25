@@ -94,18 +94,18 @@ class DivergenceCheck:
             last_high_idx = valid_highs[-1]
             prev_high_idx = valid_highs[-2]
 
-            price_increased = df_subset['close'].iloc[last_high_idx] > df_subset['close'].iloc[prev_high_idx]
-            macd_increased = df_subset['macd'].iloc[last_high_idx] > df_subset['macd'].iloc[prev_high_idx]
+            price_increased = df_subset['close'].loc[last_high_idx] > df_subset['close'].loc[prev_high_idx]
+            macd_increased = df_subset['macd'].loc[last_high_idx] > df_subset['macd'].loc[prev_high_idx]
 
             if price_increased and not macd_increased:
                 bearish_detected = True
                 bearish_details = {
-                    'price_change': df_subset['close'].iloc[last_high_idx] / df_subset['close'].iloc[prev_high_idx] - 1,
-                    'macd_change': df_subset['macd'].iloc[last_high_idx] / df_subset['macd'].iloc[prev_high_idx] - 1,
-                    'price_high_1': df_subset['close'].iloc[prev_high_idx],
-                    'price_high_2': df_subset['close'].iloc[last_high_idx],
-                    'macd_high_1': df_subset['macd'].iloc[prev_high_idx],
-                    'macd_high_2': df_subset['macd'].iloc[last_high_idx]
+                    'price_change': df_subset['close'].loc[last_high_idx] / df_subset['close'].loc[prev_high_idx] - 1,
+                    'macd_change': df_subset['macd'].loc[last_high_idx] / df_subset['macd'].loc[prev_high_idx] - 1,
+                    'price_high_1': df_subset['close'].loc[prev_high_idx],
+                    'price_high_2': df_subset['close'].loc[last_high_idx],
+                    'macd_high_1': df_subset['macd'].loc[prev_high_idx],
+                    'macd_high_2': df_subset['macd'].loc[last_high_idx]
                 }
 
         # 底背离：价格创新低，MACD 未创新低
@@ -114,18 +114,18 @@ class DivergenceCheck:
             last_low_idx = valid_lows[-1]
             prev_low_idx = valid_lows[-2]
 
-            price_decreased = df_subset['close'].iloc[last_low_idx] < df_subset['close'].iloc[prev_low_idx]
-            macd_decreased = df_subset['macd'].iloc[last_low_idx] < df_subset['macd'].iloc[prev_low_idx]
+            price_decreased = df_subset['close'].loc[last_low_idx] < df_subset['close'].loc[prev_low_idx]
+            macd_decreased = df_subset['macd'].loc[last_low_idx] < df_subset['macd'].loc[prev_low_idx]
 
             if price_decreased and not macd_decreased:
                 bullish_detected = True
                 bullish_details = {
-                    'price_change': df_subset['close'].iloc[last_low_idx] / df_subset['close'].iloc[prev_low_idx] - 1,
-                    'macd_change': df_subset['macd'].iloc[last_low_idx] / df_subset['macd'].iloc[prev_low_idx] - 1,
-                    'price_low_1': df_subset['close'].iloc[prev_low_idx],
-                    'price_low_2': df_subset['close'].iloc[last_low_idx],
-                    'macd_low_1': df_subset['macd'].iloc[prev_low_idx],
-                    'macd_low_2': df_subset['macd'].iloc[last_low_idx]
+                    'price_change': df_subset['close'].loc[last_low_idx] / df_subset['close'].loc[prev_low_idx] - 1,
+                    'macd_change': df_subset['macd'].loc[last_low_idx] / df_subset['macd'].loc[prev_low_idx] - 1,
+                    'price_low_1': df_subset['close'].loc[prev_low_idx],
+                    'price_low_2': df_subset['close'].loc[last_low_idx],
+                    'macd_low_1': df_subset['macd'].loc[prev_low_idx],
+                    'macd_low_2': df_subset['macd'].loc[last_low_idx]
                 }
 
         return {

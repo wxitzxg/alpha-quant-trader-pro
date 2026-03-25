@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """技术分析路由 - 集成业务逻辑"""
 
+import os
 from fastapi import APIRouter, HTTPException, Path, Query, Body, Depends
 from datetime import datetime
 from typing import Optional
@@ -19,9 +20,15 @@ from common.database import DatabaseManager
 
 analysis_router = APIRouter()
 
+# 从环境变量获取数据库URL
+DATABASE_URL = os.environ.get(
+    "DATABASE__URL",
+    "postgresql://alpha_quant_trader_pro:alpha_quant_trader_pro@alpha-quant-db:5432/alpha_quant_trader_pro"
+)
+
 def get_db_session() -> Session:
     """获取数据库 session 依赖"""
-    db_manager = DatabaseManager()
+    db_manager = DatabaseManager(DATABASE_URL)
     with db_manager.get_session() as session:
         yield session
 
@@ -37,7 +44,7 @@ async def analyze_five_dimension(request: AnalysisRequest):
         五维共振分析结果
     """
     try:
-        db_manager = DatabaseManager()
+        db_manager = DatabaseManager(DATABASE_URL)
         with db_manager.get_session() as session:
             analysis_service = AnalysisService(session)
 
@@ -80,7 +87,7 @@ async def analyze_with_strategies(
         VCP、九转、背离三大策略分析结果
     """
     try:
-        db_manager = DatabaseManager()
+        db_manager = DatabaseManager(DATABASE_URL)
         with db_manager.get_session() as session:
             analysis_service = AnalysisService(session)
 
@@ -121,7 +128,7 @@ async def get_indicator(
         技术指标数据
     """
     try:
-        db_manager = DatabaseManager()
+        db_manager = DatabaseManager(DATABASE_URL)
         with db_manager.get_session() as session:
             analysis_service = AnalysisService(session)
 
@@ -170,7 +177,7 @@ async def generate_analysis_report(
         格式化的完整分析报告
     """
     try:
-        db_manager = DatabaseManager()
+        db_manager = DatabaseManager(DATABASE_URL)
         with db_manager.get_session() as session:
             analysis_service = AnalysisService(session)
 
@@ -208,7 +215,7 @@ async def analyze_vcp(
         VCP 策略分析结果
     """
     try:
-        db_manager = DatabaseManager()
+        db_manager = DatabaseManager(DATABASE_URL)
         with db_manager.get_session() as session:
             analysis_service = AnalysisService(session)
 
@@ -251,7 +258,7 @@ async def analyze_td_golden_pit(
         九转策略分析结果
     """
     try:
-        db_manager = DatabaseManager()
+        db_manager = DatabaseManager(DATABASE_URL)
         with db_manager.get_session() as session:
             analysis_service = AnalysisService(session)
 
@@ -294,7 +301,7 @@ async def analyze_top_divergence(
         背离策略分析结果
     """
     try:
-        db_manager = DatabaseManager()
+        db_manager = DatabaseManager(DATABASE_URL)
         with db_manager.get_session() as session:
             analysis_service = AnalysisService(session)
 
