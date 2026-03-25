@@ -142,13 +142,29 @@ class DataSourceService:
         """获取股票列表（分页）"""
         try:
             all_stocks = StockListAPI.get(exchange=exchange)
+            
+            # 转换字段格式以匹配响应模型
+            formatted_stocks = []
+            for s in all_stocks:
+                exchange_val = s.get('exchange', '')
+                formatted_stocks.append({
+                    "ts_code": f"{s.get('symbol', '')}.{exchange_val}",
+                    "symbol": s.get('symbol', ''),
+                    "name": s.get('name', ''),
+                    "exchange": exchange_val,
+                    "market": exchange_val,
+                    "industry": s.get('industry'),
+                    "list_date": s.get('list_date'),
+                    "status": "L"  # 默认为上市状态
+                })
+            
             start = (page - 1) * page_size
             end = start + page_size
             return {
                 "success": True,
                 "data": {
-                    "stocks": all_stocks[start:end],
-                    "total": len(all_stocks),
+                    "stocks": formatted_stocks[start:end],
+                    "total": len(formatted_stocks),
                     "page": page,
                     "page_size": page_size
                 }

@@ -52,8 +52,8 @@ class AKShareAdapter(DataSourceAdapter):
             True if service is reachable
         """
         try:
-            # Test with a lightweight call
-            df = ak.stock_zh_a_spot_em()
+            # Use lightweight API for health check
+            df = ak.stock_info_a_code_name()
             return len(df) > 0
         except Exception as e:
             logger.error(f"AKShare health check failed: {e}")
@@ -376,14 +376,16 @@ class AKShareAdapter(DataSourceAdapter):
     def get_stock_list(self) -> List[Dict]:
         """获取股票列表"""
         try:
-            df = ak.stock_zh_a_spot_em()
+            # Use lightweight API that returns code and name only
+            df = ak.stock_info_a_code_name()
 
             stock_list = []
             for _, row in df.iterrows():
+                code = row['code']
                 stock = {
-                    "symbol": row['代码'],
-                    "name": row['名称'],
-                    "exchange": "SH" if row['代码'].startswith(('6', '9')) else "SZ",
+                    "symbol": code,
+                    "name": row['name'],
+                    "exchange": "SH" if code.startswith(('6', '9')) else "SZ",
                     "list_date": None,  # AKShare 不直接提供
                     "industry": None,  # 需要从其他接口获取
                     "concept": None,

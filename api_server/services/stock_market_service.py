@@ -91,12 +91,13 @@ class StockMarketService:
                 "success": True,
                 "data": [
                     {
-                        "ts_code": s.ts_code,
+                        "ts_code": f"{s.symbol}.{s.exchange}",
                         "symbol": s.symbol,
                         "name": s.name,
                         "industry": s.industry,
-                        "market": s.market,
-                        "list_date": s.list_date.isoformat() if s.list_date else None
+                        "market": s.exchange,
+                        "list_date": s.list_date.isoformat() if s.list_date else None,
+                        "status": "L" if s.is_active else "D"
                     }
                     for s in paginated_stocks
                 ],

@@ -68,8 +68,13 @@ class StockService:
                         success_count += 1
                         logger.debug(f"Updated stock: {symbol}")
                 else:
-                    # 新增股票
-                    stock = Stock(**stock_data)
+                    # 新增股票 - 处理必填字段
+                    stock_dict = stock_data.copy()
+                    # 设置默认上市日期（如果未提供）
+                    if not stock_dict.get('list_date'):
+                        stock_dict['list_date'] = datetime.now().date()
+                    
+                    stock = Stock(**stock_dict)
                     stock.last_sync_time = datetime.now()
                     self.repo.add(stock)
                     success_count += 1
@@ -78,6 +83,14 @@ class StockService:
             except Exception as e:
                 logger.error(f"Failed to sync stock {stock_data.get('symbol')}: {e}")
                 continue
+
+        # 提交事务
+        try:
+            self.repo.session.commit()
+        except Exception as e:
+            logger.error(f"Failed to commit transaction: {e}")
+            self.repo.session.rollback()
+            return 0
 
         # 记录同步日志
         self._log_sync(
