@@ -23,7 +23,10 @@ from .aggregator import (
     DataSourceAggregator,
     QuoteAPI,
     KLineAPI,
-    FundamentalsAPI
+    FundamentalsAPI,
+    TopListAPI,
+    KLineStatsAPI,
+    StockListAPI
 )
 
 __all__ = [
@@ -43,5 +46,8 @@ __all__ = [
     "DataSourceAggregator",
     "QuoteAPI",
     "KLineAPI",
-    "FundamentalsAPI"
+    "FundamentalsAPI",
+    "TopListAPI",
+    "KLineStatsAPI",
+    "StockListAPI"
 ]

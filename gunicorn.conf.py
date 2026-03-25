@@ -9,7 +9,7 @@ bind = f"{os.getenv('API_SERVER__HOST', '0.0.0.0')}:{os.getenv('API_SERVER__PORT
 
 # Worker processes
 workers = 2
-worker_class = "sync"
+worker_class = "uvicorn.workers.UvicornWorker"  # Changed to ASGI worker for FastAPI
 worker_connections = 1000
 max_requests = 1000
 max_requests_jitter = 100

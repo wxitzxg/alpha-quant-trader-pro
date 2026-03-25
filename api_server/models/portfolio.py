@@ -48,7 +48,7 @@ class CashOperation(BaseModel):
     """现金操作"""
     operation_type: str = Field(..., description="操作类型 (deposit/withdraw)")
     amount: float = Field(..., gt=0, description="金额")
-    operation_time: datetime = Field(default_factory=datetime.now, description="操作时间")
+    operation_time: datetime = Field(default_factory=lambda: datetime.now(), description="操作时间")
 
 
 class TradeRequest(BaseModel):

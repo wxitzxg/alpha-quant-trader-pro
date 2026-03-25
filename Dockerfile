@@ -13,12 +13,23 @@ COPY requirements.txt .
 # 安装依赖
 RUN pip install --user --no-cache-dir -r requirements.txt
 
-
 # ==================== 阶段 2: 运行时镜像 ====================
 FROM python:3.11-slim
 
 # 设置工作目录
 WORKDIR /app
+
+# 【核心优化】替换 apt 源为阿里云镜像，然后安装 curl
+# 1. 备份默认源
+# 2. 写入阿里云源配置
+# 3. 更新索引
+# 4. 安装 curl (--no-install-recommends 减小体积)
+# 5. 清理缓存 (减小镜像体积)
+RUN sed -i 's|http://deb.debian.org|https://mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \
+    sed -i 's|http://security.debian.org|https://mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
 
 # 复制依赖（从 builder 阶段）
 COPY --from=builder /root/.local /root/.local
