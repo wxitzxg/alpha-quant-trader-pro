@@ -93,6 +93,8 @@
 
 ### 3.1 聚合层扩展 (`data_sources/aggregator.py`)
 
+> **注意**: `_get_sorted_adapters()` 私有方法已存在于 `DataSourceAggregator` 类中（第133-156行），无需新增。
+
 **新增公共方法到 DataSourceAggregator 类:**
 
 ```python
