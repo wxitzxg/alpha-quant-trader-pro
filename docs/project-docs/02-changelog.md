@@ -12,6 +12,10 @@
 - 自动查询现价功能（可选）
 - 完整的单元测试和集成测试
 
+### Fixed
+- 数据库初始化：确保 `simulate_trading` 模块的模型在启动时正确注册到 `Base.metadata`
+- API 错误响应：修复 datetime 对象无法 JSON 序列化的问题
+
 ### Deprecated
 - `add_position()` 方法（使用 `sync_position()` 替代）
 - `update_position()` 方法（使用 `sync_position()` 替代）
@@ -192,8 +196,8 @@
 # Update dependencies
 pip install -r requirements.txt --upgrade
 
-# Run database migrations
-alembic upgrade head
+# Start API server - tables are auto-created/updated on startup
+python -m api_server.main
 
 # Restart application
 # ...

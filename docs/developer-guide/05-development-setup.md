@@ -231,14 +231,14 @@ python -c "import secrets; print(secrets.token_hex(32))"
 # Example output: a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5f67890
 ```
 
-### 5. Database Migration
+### 5. Database Initialization
 
 ```bash
-# Initialize database (if first time)
-alembic upgrade head
+# Tables are auto-created when API server starts
+python -m api_server.main
 
-# Or create tables directly
-python -c "from common.database import DatabaseManager; db = DatabaseManager(); db.create_all()"
+# Or create tables directly (useful for testing)
+python -c "from common.database import DatabaseManager; from common.config import get_config; db = DatabaseManager(get_config().get_database_url()); db.create_all(); print('Tables created')"
 
 # Verify database tables
 psql -U alphaquant -d stock_market -c "\dt"
@@ -709,29 +709,31 @@ taskkill /PID <PID> /F  # Windows
 uvicorn api_server.main:app --reload --port 8001
 ```
 
-#### Issue 4: Alembic Migration Error
+#### Issue 4: Database Table Not Created
 
 **Symptoms:**
 ```
-alembic.util.exc.CommandError: Can't locate revision identified by 'xxxx'
+relation "stocks" does not exist
 ```
 
 **Solutions:**
 ```bash
-# Check current revision
-alembic current
+# Verify database connection
+psql -U alphaquant -d stock_market -c "SELECT 1"
 
-# Upgrade to latest
-alembic upgrade head
+# Start API server to create tables
+python -m api_server.main
 
-# Downgrade and upgrade again
-alembic downgrade -1
-alembic upgrade head
+# Or manually create tables
+python -c "from common.database import DatabaseManager; from common.config import get_config; db = DatabaseManager(get_config().get_database_url()); db.create_all()"
+
+# Verify tables exist
+psql -U alphaquant -d stock_market -c "\dt"
 
 # Reset database (WARNING: deletes all data)
 dropdb stock_market
 createdb -O alphaquant stock_market
-alembic upgrade head
+python -m api_server.main
 ```
 
 #### Issue 5: Tushare API Error

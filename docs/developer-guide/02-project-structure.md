@@ -37,7 +37,6 @@ alpha-quant-trader-pro/
 ├── requirements.txt                   # Python dependencies
 ├── pyproject.toml                     # Project configuration
 ├── .env.example                       # Environment template
-├── alembic/                           # Database migrations
 │
 ├── api_server/                        # API Server Module
 │   ├── __init__.py

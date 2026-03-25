@@ -53,8 +53,10 @@ TUSHARE_TOKEN=your_tushare_token_here
 # Create database
 createdb stock_market
 
-# Run migrations
-alembic upgrade head
+# Tables are auto-created when API server starts
+# Start the server to initialize tables:
+python -m api_server.main
+# You should see: "数据库表同步完成"
 ```
 
 ---
