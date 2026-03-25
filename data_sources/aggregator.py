@@ -358,16 +358,24 @@ class DataSourceAggregator:
         Returns:
             股票列表，每个元素包含 symbol, name, exchange 等字段
         """
+        if not self.executor:
+            return []
+
         adapters = self._get_sorted_adapters('realtime')
-        for adapter in adapters:
-            try:
-                stocks = adapter.get_stock_list()
-                if exchange:
-                    stocks = [s for s in stocks if s.get('exchange') == exchange]
-                return stocks
-            except DataSourceError:
-                continue
-        return []
+
+        result = self.executor.execute_with_fallback(
+            adapters,
+            lambda adapter: adapter.get_stock_list(),
+            "get_stock_list"
+        )
+
+        if result is None:
+            return []
+
+        if exchange:
+            result = [s for s in result if s.get('exchange') == exchange]
+
+        return result
 
     def get_stock_detail(self, symbol: str) -> Optional[Dict]:
         """
@@ -379,13 +387,16 @@ class DataSourceAggregator:
         Returns:
             股票详情字典，失败返回 None
         """
+        if not self.executor:
+            return None
+
         adapters = self._get_sorted_adapters('realtime')
-        for adapter in adapters:
-            try:
-                return adapter.get_stock_detail(symbol)
-            except DataSourceError:
-                continue
-        return None
+
+        return self.executor.execute_with_fallback(
+            adapters,
+            lambda adapter: adapter.get_stock_detail(symbol),
+            "get_stock_detail"
+        )
 
 
 # ========== 简化调用接口 ==========
