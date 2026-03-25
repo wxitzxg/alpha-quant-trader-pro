@@ -9,12 +9,23 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from typing import Optional
+from datetime import datetime
 import logging
 
-from ..models.common import ErrorResponse
 from ..config import settings
 
 logger = logging.getLogger(__name__)
+
+
+def _error_response(code: int, message: str, details: Optional[str] = None) -> dict:
+    """Create a JSON-serializable error response dict"""
+    return {
+        "success": False,
+        "code": code,
+        "message": message,
+        "details": details,
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 
 def register_exception_handlers(app: FastAPI):
@@ -26,11 +37,11 @@ def register_exception_handlers(app: FastAPI):
         logger.error(f"Validation error: {exc.errors()}")
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content=ErrorResponse(
+            content=_error_response(
                 code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 message="Validation error",
                 details=str(exc.errors())
-            ).model_dump(mode='json')
+            )
         )
 
     # Pydantic 模型验证错误
@@ -39,11 +50,11 @@ def register_exception_handlers(app: FastAPI):
         logger.error(f"Pydantic validation error: {exc.errors()}")
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content=ErrorResponse(
+            content=_error_response(
                 code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 message="Data validation error",
                 details=str(exc.errors())
-            ).model_dump(mode='json')
+            )
         )
 
     # SQLAlchemy 错误
@@ -52,11 +63,11 @@ def register_exception_handlers(app: FastAPI):
         logger.error(f"Database error: {str(exc)}")
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content=ErrorResponse(
+            content=_error_response(
                 code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 message="Database error",
                 details="Internal database error occurred"
-            ).model_dump(mode='json')
+            )
         )
 
     # 通用异常（生产环境不泄露详细信息）
@@ -70,11 +81,11 @@ def register_exception_handlers(app: FastAPI):
 
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content=ErrorResponse(
+            content=_error_response(
                 code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 message="Internal server error",
                 details=details
-            ).model_dump(mode='json')
+            )
         )
 
 
