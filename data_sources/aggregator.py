@@ -564,3 +564,12 @@ class KLineStatsAPI:
                 "date": str(klines[min_price_idx].datetime.date())  # 使用 datetime
             }
         }
+
+
+class StockListAPI:
+    """股票列表 API"""
+
+    @staticmethod
+    def get(exchange: Optional[str] = None) -> List[Dict]:
+        aggregator = DataSourceAggregator()
+        return aggregator.get_stock_list(exchange=exchange)
