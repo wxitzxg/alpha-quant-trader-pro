@@ -454,6 +454,7 @@ class TopListAPI:
 
     _cache: Dict[str, Tuple[List[Dict], float]] = {}
     _cache_ttl: int = 60  # 缓存60秒
+    _cache_lock = threading.Lock()  # 线程锁，保护缓存访问
 
     @staticmethod
     def get(type: str, date: Optional[str] = None) -> List[Dict]:
@@ -461,16 +462,17 @@ class TopListAPI:
         cache_key = f"toplist_{type}_{date}"
         now = time.time()
 
-        # 检查缓存
-        if cache_key in TopListAPI._cache:
-            data, timestamp = TopListAPI._cache[cache_key]
-            if now - timestamp < TopListAPI._cache_ttl:
-                return data
+        # 检查缓存（加锁）
+        with TopListAPI._cache_lock:
+            if cache_key in TopListAPI._cache:
+                data, timestamp = TopListAPI._cache[cache_key]
+                if now - timestamp < TopListAPI._cache_ttl:
+                    return data
 
-        # 获取所有股票行情
+        # 获取所有股票行情（不加锁，避免阻塞）
         aggregator = DataSourceAggregator()
         stocks = aggregator.get_stock_list()
-        symbols = [s['symbol'] for s in stocks[:500]]  # 限制前500只
+        symbols = [s.get('symbol') for s in stocks[:500] if s.get('symbol')]  # 安全访问
 
         quotes = aggregator.batch_get_realtime(symbols)
 
@@ -492,8 +494,10 @@ class TopListAPI:
         reverse = (type == "gain")  # 涨幅榜降序，跌幅榜升序
         items.sort(key=lambda x: x["change_pct"], reverse=reverse)
 
-        # 更新缓存
-        TopListAPI._cache[cache_key] = (items[:100], now)
+        # 更新缓存（加锁）
+        with TopListAPI._cache_lock:
+            TopListAPI._cache[cache_key] = (items[:100], now)
+
         return items[:100]
 
 
