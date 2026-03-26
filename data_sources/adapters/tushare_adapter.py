@@ -131,7 +131,7 @@ class TushareAdapter(DataSourceAdapter):
         start_date: str = "",
         end_date: str = ""
     ) -> List[KLine]:
-        """获取K线数据"""
+        """获取K线数据（前复权）"""
         try:
             ts_code = self._format_symbol(symbol)
 
@@ -139,26 +139,43 @@ class TushareAdapter(DataSourceAdapter):
             start_date_fmt = start_date.replace('-', '') if start_date else ''
             end_date_fmt = end_date.replace('-', '') if end_date else ''
 
-            # Tushare 支持不同周期
+            # 使用 ts.pro_bar 获取前复权数据
+            # Tushare 的 pro.daily() 返回未复权数据，需要使用 pro_bar 并设置 adj="qfq"
             if interval == "1d":
-                # 日线
-                df = self.pro.daily(
+                # 日线 - 前复权
+                df = ts.pro_bar(
                     ts_code=ts_code,
                     start_date=start_date_fmt,
-                    end_date=end_date_fmt
+                    end_date=end_date_fmt,
+                    adj="qfq",  # 前复权
+                    api=self.pro
                 )
-            elif interval in ["1w", "1M"]:
-                # 周线/月线
-                freq = "W" if interval == "1w" else "M"
-                df = self.pro.daily(
+            elif interval == "1w":
+                # 周线 - 前复权
+                df = ts.pro_bar(
                     ts_code=ts_code,
                     start_date=start_date_fmt,
-                    end_date=end_date_fmt
+                    end_date=end_date_fmt,
+                    freq='W',
+                    adj="qfq",  # 前复权
+                    api=self.pro
                 )
-                # 需要自己按周/月聚合
+            elif interval == "1M":
+                # 月线 - 前复权
+                df = ts.pro_bar(
+                    ts_code=ts_code,
+                    start_date=start_date_fmt,
+                    end_date=end_date_fmt,
+                    freq='M',
+                    adj="qfq",  # 前复权
+                    api=self.pro
+                )
             else:
                 # 分钟线需要使用其他接口
                 logger.warning(f"Minute interval {interval} not fully supported by Tushare")
+                return []
+
+            if df is None or len(df) == 0:
                 return []
 
             klines = []
