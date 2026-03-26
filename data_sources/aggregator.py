@@ -103,45 +103,47 @@ class DataSourceAggregator:
     def _initialize_adapters(self):
         """初始化所有适配器"""
         import os
-        
+
         # 自动发现适配器类
         self.registry.auto_discover()
 
         # 从环境变量读取 API tokens
         tushare_token = os.getenv('TUSHARE_TOKEN', '')
 
-        # 根据配置创建适配器实例
+        # 收集所有需要初始化的适配器（去重）
+        adapters_to_init = set()
         for category, sources in self.config.get('sources', {}).items():
             for source_cfg in sources:
                 if source_cfg.get('enabled', True):
-                    source_name = source_cfg['name']
+                    adapters_to_init.add(source_cfg['name'])
 
-                    # 跳过尚未实现的适配器
-                    if source_name not in self.registry.get_adapter_names():
-                        logger.warning(f"Adapter {source_name} not implemented, skipping")
-                        continue
+        # 创建适配器实例（每个适配器只创建一次）
+        for source_name in adapters_to_init:
+            # 跳过尚未实现的适配器
+            if source_name not in self.registry.get_adapter_names():
+                logger.warning(f"Adapter {source_name} not implemented, skipping")
+                continue
 
-                    try:
-                        # 准备适配器参数
-                        adapter_kwargs = {
-                            'timeout': source_cfg.get('timeout', 5)
-                        }
-                        
-                        # 根据适配器类型添加特定参数
-                        # 注意：InvestodayAdapter 从环境变量读取 INVESTODAY_API_KEY
-                        if source_name == 'tushare' and tushare_token:
-                            adapter_kwargs['token'] = tushare_token
+            try:
+                # 检查是否已存在
+                if self.registry.get_adapter(source_name):
+                    continue
 
-                        # 创建适配器实例
-                        adapter = self.registry.create_adapter(source_name, **adapter_kwargs)
+                # 准备适配器参数
+                adapter_kwargs = {
+                    'timeout': 5  # 默认超时
+                }
 
-                        # 使用 property setter 设置优先级（方案 3A）
-                        adapter.priority = source_cfg.get('priority', 100)
+                # 根据适配器类型添加特定参数
+                if source_name == 'tushare' and tushare_token:
+                    adapter_kwargs['token'] = tushare_token
 
-                        logger.info(f"Initialized adapter: {source_name} (priority: {adapter.priority})")
+                # 创建适配器实例
+                adapter = self.registry.create_adapter(source_name, **adapter_kwargs)
+                logger.info(f"Initialized adapter: {source_name}")
 
-                    except Exception as e:
-                        logger.error(f"Failed to initialize {source_name}: {e}", exc_info=True)
+            except Exception as e:
+                logger.error(f"Failed to initialize {source_name}: {e}", exc_info=True)
 
     def _get_sorted_adapters(self, category: str) -> List[DataSourceAdapter]:
         """
@@ -155,18 +157,21 @@ class DataSourceAggregator:
         """
         sources = self.config.get('sources', {}).get(category, [])
 
-        # 获取所有已启用的适配器
-        adapters = []
+        # 获取所有已启用的适配器，并附带优先级
+        adapter_with_priority = []
         for source_cfg in sources:
             if source_cfg.get('enabled', True):
                 adapter = self.registry.get_adapter(source_cfg['name'])
                 if adapter:
-                    adapters.append(adapter)
+                    # 从配置读取优先级，而不是从 adapter 实例读取
+                    priority = source_cfg.get('priority', 100)
+                    adapter_with_priority.append((adapter, priority))
 
-        # 按优先级排序
-        adapters.sort(key=lambda a: getattr(a, 'priority', 100))
+        # 按优先级排序（数字越小越优先）
+        adapter_with_priority.sort(key=lambda x: x[1])
 
-        return adapters
+        # 返回排序后的 adapter 列表
+        return [a for a, p in adapter_with_priority]
 
     # ========== 对外统一接口 ==========
 

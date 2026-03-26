@@ -1,4 +1,9 @@
 # ==================== 数据源配置 ====================
+# 优化原则:
+# 1. 免费优先 - 优先使用免费数据源
+# 2. 速度优先 - 相同功能选最快的
+# 3. 复权优先 - K线优先使用支持复权的数据源
+
 data_sources:
   # 默认请求超时（秒）
   # 范围: >= 1
@@ -18,16 +23,20 @@ data_sources:
   # 数据源列表
   sources:
     # ====== 行情数据源 ======
+    # Sina: 免费、最快 (0.1s)
+    # Investoday: 收费、快 (0.2s)
+    # AKShare: 免费、慢
+    # Tushare: 免费、慢
     realtime:
-      - name: "investoday"
+      - name: "sina"
         priority: 10
         enabled: true
         timeout: 3
 
-      - name: "sina"           # 源名称
-        priority: 20           # 优先级（数字越小优先级越高）
-        enabled: true          # 是否启用
-        timeout: 3             # 该源的特定超时时间（秒）
+      - name: "investoday"
+        priority: 20
+        enabled: true
+        timeout: 3
 
       - name: "akshare"
         priority: 30
@@ -40,18 +49,22 @@ data_sources:
         timeout: 5
 
     # ====== K线数据源 ======
+    # Tushare: 免费、支持前复权 (推荐)
+    # AKShare: 免费、支持前复权
+    # Investoday: 收费
+    # Sina: 免费、未复权
     kline:
-      - name: "investoday"
+      - name: "tushare"
         priority: 10
         enabled: true
         timeout: 10
 
-      - name: "tushare"
+      - name: "akshare"
         priority: 20
         enabled: true
         timeout: 10
 
-      - name: "akshare"
+      - name: "investoday"
         priority: 30
         enabled: true
         timeout: 10
@@ -62,6 +75,8 @@ data_sources:
         timeout: 5
 
     # ====== 基本面数据源 ======
+    # Tushare: 免费 (120积分可用)
+    # AKShare: 免费
     fundamentals:
       - name: "tushare"
         priority: 10
@@ -74,61 +89,61 @@ data_sources:
         timeout: 15
 
     # ====== 技术指标数据源 ======
+    # Tushare: 免费 (daily_basic, 120积分可用)
+    # AKShare: 免费
     tech_indicators:
-      - name: "akshare"
+      - name: "tushare"
         priority: 10
         enabled: true
         timeout: 10
 
-      - name: "tushare"
+      - name: "akshare"
         priority: 20
         enabled: true
         timeout: 10
 
     # ====== 资金流向数据源 ======
+    # AKShare: 免费
+    # Tushare: 需要 2000 积分 (免费账户不可用)
     fund_flows:
       - name: "akshare"
         priority: 10
         enabled: true
         timeout: 10
 
-      - name: "tushare"
-        priority: 20
-        enabled: true
-        timeout: 10
-
     # ====== 龙虎榜数据源 ======
+    # AKShare: 免费
+    # Tushare: 需要 2000 积分 (免费账户不可用)
     dragon_tiger:
       - name: "akshare"
         priority: 10
         enabled: true
         timeout: 10
 
-      - name: "tushare"
-        priority: 20
-        enabled: true
-        timeout: 10
-
     # ====== 估值指标数据源 ======
+    # AKShare: 免费
+    # Tushare: 免费 (daily_basic)
     valuation:
-      - name: "akshare"
+      - name: "tushare"
         priority: 10
         enabled: true
         timeout: 10
 
-      - name: "tushare"
+      - name: "akshare"
         priority: 20
         enabled: true
         timeout: 10
 
     # ====== 每股指标数据源 ======
+    # Tushare: 免费 (daily_basic)
+    # AKShare: 免费
     per_share_indicators:
-      - name: "akshare"
+      - name: "tushare"
         priority: 10
         enabled: true
         timeout: 10
 
-      - name: "tushare"
+      - name: "akshare"
         priority: 20
         enabled: true
         timeout: 10
@@ -141,13 +156,15 @@ data_sources:
         timeout: 10
 
     # ====== 量价指标数据源 ======
+    # Tushare: 免费
+    # AKShare: 免费
     price_vol_ind:
-      - name: "akshare"
+      - name: "tushare"
         priority: 10
         enabled: true
         timeout: 10
 
-      - name: "tushare"
+      - name: "akshare"
         priority: 20
         enabled: true
         timeout: 10
@@ -159,19 +176,16 @@ data_sources:
         enabled: true
         timeout: 10
 
-      - name: "tushare"
-        priority: 20
-        enabled: true
-        timeout: 10
-
     # ====== 换手率数据源 ======
+    # Tushare: 免费 (daily_basic)
+    # AKShare: 免费
     turnover_rates:
-      - name: "akshare"
+      - name: "tushare"
         priority: 10
         enabled: true
         timeout: 10
 
-      - name: "tushare"
+      - name: "akshare"
         priority: 20
         enabled: true
         timeout: 10
@@ -183,11 +197,6 @@ data_sources:
         enabled: true
         timeout: 10
 
-      - name: "tushare"
-        priority: 20
-        enabled: true
-        timeout: 10
-
     # ====== 杜邦分析数据源 ======
     dupont_analysis:
       - name: "investoday"
@@ -196,25 +205,30 @@ data_sources:
         timeout: 15
 
     # ====== 股票列表数据源 ======
+    # Tushare: 免费 (basic)
+    # AKShare: 免费
     stock_list:
-      - name: "akshare"
-        priority: 10
-        enabled: true
-        timeout: 15
-
       - name: "tushare"
-        priority: 20
+        priority: 10
         enabled: true
         timeout: 10
 
+      - name: "akshare"
+        priority: 20
+        enabled: true
+        timeout: 15
+
     # ====== 财务报表数据源 ======
+    # Investoday: 收费、数据全
+    # Tushare: 免费 (120积分可用)
+    # AKShare: 免费
     financial_statements:
-      - name: "investoday"
+      - name: "tushare"
         priority: 10
         enabled: true
         timeout: 15
 
-      - name: "tushare"
+      - name: "investoday"
         priority: 20
         enabled: true
         timeout: 15
