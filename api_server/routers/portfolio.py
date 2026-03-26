@@ -15,6 +15,14 @@ from ..models.portfolio import (
     TransactionHistory
 )
 from ..services import PortfolioService
+from portfolio_manager.schemas.favorite_schemas import (
+    AddFavoriteRequest,
+    RemoveFavoriteRequest,
+    UpdateFavoriteRequest,
+    FavoriteResponse
+)
+from portfolio_manager.services.favorite_service import FavoriteService
+from common.exceptions import BusinessError, NotFoundError
 
 portfolio_router = APIRouter()
 service = PortfolioService()
@@ -229,15 +237,6 @@ async def sync_position(request: PositionSyncRequest):
 
 # ==================== 股票收藏管理 ====================
 
-from portfolio_manager.schemas.favorite_schemas import (
-    AddFavoriteRequest,
-    RemoveFavoriteRequest,
-    UpdateFavoriteRequest,
-    FavoriteResponse
-)
-from portfolio_manager.services.favorite_service import FavoriteService
-from common.exceptions import BusinessError, NotFoundError
-
 
 def _get_favorite_service():
     """获取收藏服务实例"""
@@ -266,6 +265,8 @@ async def get_favorites(
             },
             message="Favorites retrieved successfully"
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting favorites: {str(e)}")
 
@@ -287,6 +288,8 @@ async def add_favorite(request: AddFavoriteRequest):
         )
     except BusinessError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error adding favorite: {str(e)}")
 
@@ -304,6 +307,8 @@ async def remove_favorite(request: RemoveFavoriteRequest):
         )
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error removing favorite: {str(e)}")
 
@@ -327,5 +332,7 @@ async def update_favorite(request: UpdateFavoriteRequest):
         raise HTTPException(status_code=404, detail=str(e))
     except BusinessError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating favorite: {str(e)}")
