@@ -57,7 +57,9 @@ class SinaAdapter(DataSourceAdapter):
             # Test connectivity with a simple request
             test_symbol = self._format_symbol("600519")
             url = f"{self.base_url}{test_symbol}"
-            response = self._session.get(url, timeout=3)
+            # 必须添加 Referer 头才能访问
+            headers = {"Referer": "https://finance.sina.com.cn"}
+            response = self._session.get(url, timeout=3, headers=headers)
             return response.status_code == 200
         except Exception as e:
             logger.error(f"Sina health check failed: {e}")
@@ -67,9 +69,7 @@ class SinaAdapter(DataSourceAdapter):
     def name(self) -> str:
         return "sina"
 
-    @property
-    def priority(self) -> int:
-        return self._priority
+    # priority 属性继承自基类，无需重写
 
     def get_realtime(self, symbol: str) -> Optional[Quote]:
         """获取实时行情"""
@@ -77,7 +77,9 @@ class SinaAdapter(DataSourceAdapter):
             sina_symbol = self._format_symbol(symbol)
             url = f"{self.base_url}{sina_symbol}"
 
-            response = self._session.get(url, timeout=self.timeout)
+            # 必须添加 Referer 头才能访问
+            headers = {"Referer": "https://finance.sina.com.cn"}
+            response = self._session.get(url, timeout=self.timeout, headers=headers)
             response.encoding = 'gbk'
 
             if response.status_code != 200:
@@ -136,14 +138,16 @@ class SinaAdapter(DataSourceAdapter):
 
             return Quote(
                 symbol=symbol,
+                name=name,
                 price=current,
                 open_price=open_price,
                 high=high,
                 low=low,
+                pre_close=pre_close,
                 change=change,
                 percent=percent,
                 volume=volume,
-                amount=0.0,  # 新浪不直接提供成交额
+                amount=float(values[9]) if len(values) > 9 and values[9] else 0.0,  # 成交额
                 bid_price=bid_prices,
                 bid_volume=bid_volumes,
                 ask_price=ask_prices,
@@ -162,7 +166,9 @@ class SinaAdapter(DataSourceAdapter):
             sina_symbols = [self._format_symbol(s) for s in symbols]
             url = f"{self.base_url}{','.join(sina_symbols)}"
 
-            response = self._session.get(url, timeout=self.timeout * 2)  # 批量查询增加超时
+            # 必须添加 Referer 头才能访问
+            headers = {"Referer": "https://finance.sina.com.cn"}
+            response = self._session.get(url, timeout=self.timeout * 2, headers=headers)  # 批量查询增加超时
             response.encoding = 'gbk'
 
             if response.status_code != 200:
@@ -187,24 +193,29 @@ class SinaAdapter(DataSourceAdapter):
                     continue
 
                 # 解析 OHLC
+                name = values[0]
                 open_price = float(values[1]) if values[1] else 0.0
                 current = float(values[3]) if values[3] else 0.0
                 high = float(values[4]) if values[4] else 0.0
                 low = float(values[5]) if values[5] else 0.0
                 pre_close = float(values[2]) if values[2] else 0.0
+                volume = int(values[8]) if values[8] else 0
+                amount = float(values[9]) if len(values) > 9 and values[9] else 0.0
                 change = current - pre_close
                 percent = change / pre_close if pre_close != 0 else 0.0
 
                 quote = Quote(
                     symbol=symbol,
+                    name=name,
                     price=current,
                     open_price=open_price,
                     high=high,
                     low=low,
+                    pre_close=pre_close,
                     change=change,
                     percent=percent,
-                    volume=int(values[8]) if values[8] else 0,
-                    amount=0.0,
+                    volume=volume,
+                    amount=amount,
                     bid_price=[],
                     bid_volume=[],
                     ask_price=[],
@@ -299,6 +310,126 @@ class SinaAdapter(DataSourceAdapter):
         """
         logger.warning("SinaFinance financial indicators not supported")
         return {}
+
+    def get_stock_list(self) -> List[Dict]:
+        """获取股票列表 - Sina 不支持"""
+        logger.warning("SinaFinance stock list not supported")
+        return []
+
+    def get_stock_detail(self, symbol: str) -> Optional[Dict]:
+        """获取股票详情 - Sina 不支持"""
+        logger.warning("SinaFinance stock detail not supported")
+        return None
+
+    def get_tech_indicators(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取技术指标 - Sina 不支持"""
+        logger.warning("SinaFinance tech indicators not supported")
+        return []
+
+    def get_fund_flows(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取资金流向 - Sina 不支持"""
+        logger.warning("SinaFinance fund flows not supported")
+        return []
+
+    def get_dragon_tiger(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取龙虎榜 - Sina 不支持"""
+        logger.warning("SinaFinance dragon tiger not supported")
+        return []
+
+    def get_valuation(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取估值指标 - Sina 不支持"""
+        logger.warning("SinaFinance valuation not supported")
+        return []
+
+    def get_per_share_indicators(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取每股指标 - Sina 不支持"""
+        logger.warning("SinaFinance per share indicators not supported")
+        return []
+
+    def get_osc_indicators(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取超买超卖指标 - Sina 不支持"""
+        logger.warning("SinaFinance osc indicators not supported")
+        return []
+
+    def get_price_vol_ind(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取量价指标 - Sina 不支持"""
+        logger.warning("SinaFinance price vol indicators not supported")
+        return []
+
+    def get_limit_up_down(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取涨跌停 - Sina 不支持"""
+        logger.warning("SinaFinance limit up down not supported")
+        return []
+
+    def get_turnover_rates(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取换手率 - Sina 不支持"""
+        logger.warning("SinaFinance turnover rates not supported")
+        return []
+
+    def get_fund_quotes(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取基金净值 - Sina 不支持"""
+        logger.warning("SinaFinance fund quotes not supported")
+        return []
+
+    def get_dupont_analysis(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None
+    ) -> List[dict]:
+        """获取杜邦分析 - Sina 不支持"""
+        logger.warning("SinaFinance dupont analysis not supported")
+        return []
 
     def _format_symbol(self, symbol: str) -> str:
         """

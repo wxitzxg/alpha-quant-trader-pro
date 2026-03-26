@@ -1,0 +1,36 @@
+# ==================== 数据库配置 ====================
+# 注意：敏感配置（如数据库URL）应通过环境变量设置
+# 请参考 .env.example 了解如何配置环境变量
+database:
+  # 数据库连接URL - 建议通过 DATABASE_URL 环境变量设置
+  # 格式: postgresql://用户名:密码@主机:端口/数据库名
+  # 示例: postgresql://postgres:password@localhost:5432/stock_market
+  url: ""
+
+  # 连接池大小
+  # 同时保持的数据库连接数量
+  # 范围: >= 1
+  pool_size: 10
+
+  # 最大溢出连接数
+  # 超过pool_size后，额外允许的连接数
+  # 范围: >= 0
+  max_overflow: 20
+
+  # 连接预检
+  # 每次使用连接前检查连接是否有效
+  pool_pre_ping: true
+
+  # 连接回收时间（秒）
+  # 超过此时间的连接会被回收重建
+  # 范围: >= 0
+  pool_recycle: 3600
+
+  # 连接超时时间（秒）
+  # 数据库连接超时时间
+  # 范围: >= 1
+  connect_timeout: 30
+
+  # 自动创建表
+  # 启动时是否自动创建表结构
+  auto_create_tables: false

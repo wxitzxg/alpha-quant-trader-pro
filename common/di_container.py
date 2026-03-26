@@ -35,8 +35,7 @@ class Container(containers.DeclarativeContainer):
 
     # 数据源聚合器
     data_source_aggregator = providers.Singleton(
-        DataSourceAggregator,
-        config_path=config.data_source.config_path
+        DataSourceAggregator
     )
 
     # ========== 子模块容器 ==========
@@ -63,11 +62,6 @@ class Container(containers.DeclarativeContainer):
                 "max_overflow": config.database.max_overflow,
                 "pool_pre_ping": config.database.pool_pre_ping,
                 "pool_recycle": config.database.pool_recycle,
-            },
-            "data_source": {
-                "config_path": config.data_source.config_path,
-                "timeout": config.data_source.timeout,
-                "max_retries": config.data_source.max_retries,
             },
         })
 
@@ -142,3 +136,7 @@ def get_container() -> Container:
     if not hasattr(get_container, "_instance"):
         get_container._instance = init_container()
     return get_container._instance
+
+
+# 全局容器实例
+container = get_container()
