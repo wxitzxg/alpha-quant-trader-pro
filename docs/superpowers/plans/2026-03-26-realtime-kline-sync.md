@@ -414,9 +414,17 @@ git commit -m "feat: SinaAdapter 解析并传入 OHLC 字段"
 **Files:**
 - Modify: `stock_market/services/kline_service.py`
 
-- [ ] **Step 1: 在 KLineService 类中添加 sync_realtime_to_kline 方法**
+- [ ] **Step 1: 添加必要的类型导入**
 
-在文件末尾添加新方法（注意：使用文件顶部已有的 `date` 导入）：
+在文件顶部修改 `typing` 导入：
+
+```python
+from typing import List, Optional, Tuple, Dict, Any
+```
+
+- [ ] **Step 2: 在 KLineService 类中添加 sync_realtime_to_kline 方法**
+
+在文件末尾添加新方法（注意：类已有 `@handle_exceptions` 装饰器，新方法自动继承异常处理）：
 
 ```python
     def sync_realtime_to_kline(
@@ -579,12 +587,12 @@ git commit -m "feat: SinaAdapter 解析并传入 OHLC 字段"
         }
 ```
 
-- [ ] **Step 2: 验证语法正确**
+- [ ] **Step 3: 验证语法正确**
 
 Run: `python -c "from stock_market.services.kline_service import KLineService; print('OK')"`
 Expected: `OK`
 
-- [ ] **Step 3: 提交**
+- [ ] **Step 4: 提交**
 
 ```bash
 git add stock_market/services/kline_service.py
