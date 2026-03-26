@@ -21,27 +21,13 @@
 
 **文件**: `data_sources/models.py`
 
-扩展 `Quote` 模型：
+`Quote` 模型新增 OHLC 字段：
 
 ```python
-class Quote(BaseModel):
-    """实时行情数据模型"""
-    symbol: str
-    price: float
-    change: float
-    percent: float
-    volume: int
-    amount: float
-    # 新增 OHLC 字段
-    open_price: Optional[float] = None   # 开盘价
-    high: Optional[float] = None         # 最高价
-    low: Optional[float] = None          # 最低价
-    # 原有字段
-    bid_price: List[float] = Field(default_factory=list)
-    bid_volume: List[int] = Field(default_factory=list)
-    ask_price: List[float] = Field(default_factory=list)
-    ask_volume: List[int] = Field(default_factory=list)
-    timestamp: datetime
+# 在现有 Quote 模型中新增以下字段：
+open_price: Optional[float] = None   # 开盘价
+high: Optional[float] = None         # 最高价
+low: Optional[float] = None          # 最低价
 ```
 
 ### 2. 数据源适配器修改
@@ -94,7 +80,7 @@ class RealtimeSyncErrorCode(str, Enum):
 class RealtimeKLineSyncParams(BaseModel):
     stock_codes: List[str] = Field(
         ...,
-        description="股票代码列表",
+        description="股票代码列表，纯代码格式如 ['600519', '000001']，系统自动识别沪市/深市",
         min_length=1,
         max_length=100
     )
@@ -102,6 +88,52 @@ class RealtimeKLineSyncParams(BaseModel):
         default="1d",
         description="周期，仅支持 1d（日线）"
     )
+```
+
+**请求示例**:
+```json
+POST /market/kline/sync-realtime
+{
+  "stock_codes": ["600519", "000001"],
+  "interval": "1d"
+}
+```
+
+**成功响应示例**:
+```json
+{
+  "success": true,
+  "message": "同步完成",
+  "data": {
+    "total_count": 2,
+    "success_count": 2,
+    "failed_count": 0,
+    "skipped_count": 0,
+    "details": [
+      {"symbol": "600519", "status": "updated", "reason": null},
+      {"symbol": "000001", "status": "updated", "reason": null}
+    ]
+  }
+}
+```
+
+**部分失败响应示例**:
+```json
+{
+  "success": true,
+  "message": "同步完成",
+  "data": {
+    "total_count": 3,
+    "success_count": 2,
+    "failed_count": 1,
+    "skipped_count": 0,
+    "details": [
+      {"symbol": "600519", "status": "updated", "reason": null},
+      {"symbol": "000001", "status": "updated", "reason": null},
+      {"symbol": "999999", "status": "failed", "reason": "stock_not_found"}
+    ]
+  }
+}
 ```
 
 **响应模型**（遵循现有 `APIResponse[T]` 包装模式）:
@@ -167,11 +199,31 @@ def sync_realtime_to_kline(
 1. 调用 `DataSourceAggregator.batch_get_realtime(symbols)`
 2. 遍历 Quote 列表
 3. 检查 OHLC 数据是否完整
-4. 转换为 KLine 记录
+4. 转换为 KLine 记录（见字段映射）
 5. 查询当日K线是否存在 → 存在则覆盖更新，不存在则新增
 6. 返回处理结果
 
-**事务策略**: 部分成功模式，每只股票独立处理，单只失败不影响其他股票。成功记录立即提交。
+**Quote → KLine 字段映射**:
+```python
+# 注意：Pydantic Quote 与 ORM KLine 字段名差异
+KLine(
+    symbol=quote.symbol,
+    date=today,                    # 当前自然日
+    interval=interval,
+    open=quote.open_price,         # Quote.open_price → KLine.open
+    high=quote.high,
+    low=quote.low,
+    close=quote.price,             # Quote.price → KLine.close
+    volume=quote.volume,
+    amount=quote.amount,
+    sync_time=datetime.now()
+)
+```
+
+**事务策略**:
+- 每只股票使用独立的数据库会话
+- 单只股票处理成功后立即提交
+- 单只股票失败不回滚其他股票的更新
 
 ### 6. 错误处理
 
@@ -218,3 +270,5 @@ def sync_realtime_to_kline(
 8. 无效股票代码处理（记录失败详情）
 9. 数据源不支持OHLC时跳过
 10. 数据库写入失败处理
+11. 数据源完全不可用时的全局错误处理
+12. 非法股票代码格式验证
