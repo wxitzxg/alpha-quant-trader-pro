@@ -5,9 +5,11 @@ from .position_repository import (
     TransactionRepository,
     CashBalanceRepository
 )
+from .favorite_repository import FavoriteRepository
 
 __all__ = [
     'PositionRepository',
     'TransactionRepository',
-    'CashBalanceRepository'
+    'CashBalanceRepository',
+    'FavoriteRepository'
 ]

@@ -14,6 +14,12 @@ from .account_schemas import (
     AccountSummarySchema,
     CashBalanceSchema
 )
+from .favorite_schemas import (
+    AddFavoriteRequest,
+    RemoveFavoriteRequest,
+    UpdateFavoriteRequest,
+    FavoriteResponse
+)
 
 __all__ = [
     'PositionCreateSchema',
@@ -23,5 +29,9 @@ __all__ = [
     'TransactionQuerySchema',
     'TransactionResponseSchema',
     'AccountSummarySchema',
-    'CashBalanceSchema'
+    'CashBalanceSchema',
+    'AddFavoriteRequest',
+    'RemoveFavoriteRequest',
+    'UpdateFavoriteRequest',
+    'FavoriteResponse'
 ]

@@ -65,3 +65,19 @@ class CashBalance(Base):
     amount = Column(DECIMAL(15, 4), nullable=False, default=0, comment='现金余额')
     version = Column(Integer, nullable=False, default=0, comment='乐观锁版本号')
     updated_at = Column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class StockFavorite(Base):
+    """股票收藏表"""
+    __tablename__ = 'stock_favorites'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    symbol = Column(String(20), nullable=False, unique=True, comment='股票代码')
+    tag = Column(String(50), nullable=True, comment='标签')
+    note = Column(String(200), nullable=True, comment='备注')
+    created_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
+    updated_at = Column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        Index('idx_stock_favorites_created_at', created_at.desc()),
+    )
