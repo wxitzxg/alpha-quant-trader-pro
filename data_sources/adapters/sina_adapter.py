@@ -114,27 +114,29 @@ class SinaAdapter(DataSourceAdapter):
             percent = change / pre_close if pre_close != 0 else 0.0
 
             # 解析五档数据
+            # Sina 格式: [10]=买一量, [11]=买一价, [12]=买二量, [13]=买二价, ...
+            #           [20]=卖一量, [21]=卖一价, [22]=卖二量, [23]=卖二价, ...
             bid_prices = []
             bid_volumes = []
             ask_prices = []
             ask_volumes = []
 
             if len(values) >= 22:
-                # 五档买价和买量
+                # 五档买量和买价 (量在前，价在后)
                 for i in range(5):
                     idx = 10 + i * 2
                     if idx < len(values) and values[idx]:
-                        bid_prices.append(float(values[idx]))
+                        bid_volumes.append(int(float(values[idx])))  # 量
                     if idx + 1 < len(values) and values[idx + 1]:
-                        bid_volumes.append(int(values[idx + 1]))
+                        bid_prices.append(float(values[idx + 1]))     # 价
 
-                # 五档卖价和卖量
+                # 五档卖量和卖价 (量在前，价在后)
                 for i in range(5):
                     idx = 20 + i * 2
                     if idx < len(values) and values[idx]:
-                        ask_prices.append(float(values[idx]))
+                        ask_volumes.append(int(float(values[idx])))   # 量
                     if idx + 1 < len(values) and values[idx + 1]:
-                        ask_volumes.append(int(values[idx + 1]))
+                        ask_prices.append(float(values[idx + 1]))     # 价
 
             return Quote(
                 symbol=symbol,
