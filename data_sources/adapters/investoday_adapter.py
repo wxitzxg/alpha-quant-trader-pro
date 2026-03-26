@@ -424,13 +424,32 @@ class InvestodayAdapter(DataSourceAdapter):
             BalanceSheet 对象
         """
         symbol = data.get("stockCode", "")
-        year = int(data.get("reportYear", 0))
-        quarter = int(data.get("reportQuarter", 0))
-        report_date = data.get("reportDate", "")
+        
+        # 从 reportPeriodEnd 解析日期
+        report_period_end = data.get("reportPeriodEnd", "")
+        if report_period_end:
+            # 格式: "2024-09-30 00:00:00"
+            report_date = report_period_end.split(" ")[0]
+            year, month, day = report_date.split("-")
+            year = int(year)
+            month = int(month)
+            # 根据月份推导季度
+            if month <= 3:
+                quarter = 1
+            elif month <= 6:
+                quarter = 2
+            elif month <= 9:
+                quarter = 3
+            else:
+                quarter = 4
+        else:
+            year = 0
+            quarter = 0
+            report_date = ""
 
-        total_assets = float(data.get("totalAssets", 0))
-        total_liabilities = float(data.get("totalLiabilities", 0))
-        shareholders_equity = float(data.get("shareholdersEquity", 0))
+        total_assets = float(data.get("totalAssets", 0) or 0)
+        total_liabilities = float(data.get("totalLiabilities", 0) or 0)
+        shareholders_equity = float(data.get("totalEquity", 0) or 0)
 
         return BalanceSheet(
             symbol=symbol,
@@ -453,13 +472,30 @@ class InvestodayAdapter(DataSourceAdapter):
             IncomeStatement 对象
         """
         symbol = data.get("stockCode", "")
-        year = int(data.get("reportYear", 0))
-        quarter = int(data.get("reportQuarter", 0))
-        report_date = data.get("reportDate", "")
+        
+        # 从 reportPeriodEnd 解析日期
+        report_period_end = data.get("reportPeriodEnd", "")
+        if report_period_end:
+            report_date = report_period_end.split(" ")[0]
+            year, month, day = report_date.split("-")
+            year = int(year)
+            month = int(month)
+            if month <= 3:
+                quarter = 1
+            elif month <= 6:
+                quarter = 2
+            elif month <= 9:
+                quarter = 3
+            else:
+                quarter = 4
+        else:
+            year = 0
+            quarter = 0
+            report_date = ""
 
-        revenue = float(data.get("revenue", 0))
-        net_profit = float(data.get("netProfit", 0))
-        eps = float(data.get("eps", 0))
+        revenue = float(data.get("revenue", 0) or 0)
+        net_profit = float(data.get("netProfit", 0) or 0)
+        eps = float(data.get("epsBasic", 0) or 0)
 
         return IncomeStatement(
             symbol=symbol,
@@ -482,13 +518,30 @@ class InvestodayAdapter(DataSourceAdapter):
             CashFlowStatement 对象
         """
         symbol = data.get("stockCode", "")
-        year = int(data.get("reportYear", 0))
-        quarter = int(data.get("reportQuarter", 0))
-        report_date = data.get("reportDate", "")
+        
+        # 从 reportPeriodEnd 解析日期
+        report_period_end = data.get("reportPeriodEnd", "")
+        if report_period_end:
+            report_date = report_period_end.split(" ")[0]
+            year, month, day = report_date.split("-")
+            year = int(year)
+            month = int(month)
+            if month <= 3:
+                quarter = 1
+            elif month <= 6:
+                quarter = 2
+            elif month <= 9:
+                quarter = 3
+            else:
+                quarter = 4
+        else:
+            year = 0
+            quarter = 0
+            report_date = ""
 
-        operating_cash_flow = float(data.get("operatingCashFlow", 0))
-        investing_cash_flow = float(data.get("investingCashFlow", 0))
-        financing_cash_flow = float(data.get("financingCashFlow", 0))
+        operating_cash_flow = float(data.get("cfo", 0) or 0)
+        investing_cash_flow = float(data.get("cfi", 0) or 0)
+        financing_cash_flow = float(data.get("cff", 0) or 0)
 
         return CashFlowStatement(
             symbol=symbol,
@@ -558,7 +611,12 @@ class InvestodayAdapter(DataSourceAdapter):
                 }
             )
 
-            items = data.get("items", [])
+            # 处理 data 可能是 list 或 dict 的情况
+            if isinstance(data, list):
+                items = data
+            else:
+                items = data.get("items", [])
+            
             if items:
                 return self._parse_balance_sheet(items[0])
             return None
@@ -599,7 +657,12 @@ class InvestodayAdapter(DataSourceAdapter):
                 }
             )
 
-            items = data.get("items", [])
+            # 处理 data 可能是 list 或 dict 的情况
+            if isinstance(data, list):
+                items = data
+            else:
+                items = data.get("items", [])
+            
             if items:
                 return self._parse_income_statement(items[0])
             return None
@@ -640,7 +703,12 @@ class InvestodayAdapter(DataSourceAdapter):
                 }
             )
 
-            items = data.get("items", [])
+            # 处理 data 可能是 list 或 dict 的情况
+            if isinstance(data, list):
+                items = data
+            else:
+                items = data.get("items", [])
+            
             if items:
                 return self._parse_cash_flow_statement(items[0])
             return None
