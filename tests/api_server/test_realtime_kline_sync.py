@@ -31,7 +31,7 @@ class TestRealtimeKLineSync:
             mock_sync.return_value = mock_result
 
             response = client.post(
-                "/market/kline/sync-realtime",
+                "/api/v1/market/kline/sync-realtime",
                 json={"stock_codes": ["600519"], "interval": "1d"}
             )
 
@@ -61,7 +61,7 @@ class TestRealtimeKLineSync:
             mock_sync.return_value = mock_result
 
             response = client.post(
-                "/market/kline/sync-realtime",
+                "/api/v1/market/kline/sync-realtime",
                 json={"stock_codes": ["600519", "000001"], "interval": "1d"}
             )
 
@@ -74,7 +74,7 @@ class TestRealtimeKLineSync:
     def test_sync_realtime_kline_empty_list(self):
         """测试空列表返回422错误"""
         response = client.post(
-            "/market/kline/sync-realtime",
+            "/api/v1/market/kline/sync-realtime",
             json={"stock_codes": [], "interval": "1d"}
         )
 
@@ -83,7 +83,7 @@ class TestRealtimeKLineSync:
     def test_sync_realtime_kline_invalid_interval(self):
         """测试无效interval返回400错误"""
         response = client.post(
-            "/market/kline/sync-realtime",
+            "/api/v1/market/kline/sync-realtime",
             json={"stock_codes": ["600519"], "interval": "1w"}
         )
 
@@ -110,7 +110,7 @@ class TestRealtimeKLineSync:
             mock_sync.return_value = mock_result
 
             response = client.post(
-                "/market/kline/sync-realtime",
+                "/api/v1/market/kline/sync-realtime",
                 json={"stock_codes": ["600519", "000001", "999999"], "interval": "1d"}
             )
 
@@ -124,7 +124,7 @@ class TestRealtimeKLineSync:
         stock_codes = [f"600{i:03d}" for i in range(101)]
 
         response = client.post(
-            "/market/kline/sync-realtime",
+            "/api/v1/market/kline/sync-realtime",
             json={"stock_codes": stock_codes, "interval": "1d"}
         )
 
@@ -150,7 +150,7 @@ class TestRealtimeKLineSync:
             mock_sync.return_value = mock_result
 
             response = client.post(
-                "/market/kline/sync-realtime",
+                "/api/v1/market/kline/sync-realtime",
                 json={"stock_codes": ["600519", "000001"], "interval": "1d"}
             )
 
@@ -178,7 +178,7 @@ class TestRealtimeKLineSync:
             mock_sync.return_value = mock_result
 
             response = client.post(
-                "/market/kline/sync-realtime",
+                "/api/v1/market/kline/sync-realtime",
                 json={"stock_codes": ["600519"], "interval": "1d"}
             )
 
@@ -205,7 +205,7 @@ class TestRealtimeKLineSync:
             mock_sync.return_value = mock_result
 
             response = client.post(
-                "/market/kline/sync-realtime",
+                "/api/v1/market/kline/sync-realtime",
                 json={"stock_codes": ["600519"], "interval": "1d"}
             )
 
