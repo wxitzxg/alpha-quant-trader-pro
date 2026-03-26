@@ -115,19 +115,19 @@ class TestFavoriteRepository:
 
         assert result == 0
 
-    def test_exists_true(self, repository, db_session):
+    def test_exists_by_symbol_true(self, repository, db_session):
         """测试检查股票是否已收藏（存在）"""
         favorite = StockFavorite(symbol="600519", tag="自选股")
         db_session.add(favorite)
         db_session.commit()
 
-        result = repository.exists("600519")
+        result = repository.exists_by_symbol("600519")
 
         assert result is True
 
-    def test_exists_false(self, repository):
+    def test_exists_by_symbol_false(self, repository):
         """测试检查股票是否已收藏（不存在）"""
-        result = repository.exists("999999")
+        result = repository.exists_by_symbol("999999")
 
         assert result is False
 

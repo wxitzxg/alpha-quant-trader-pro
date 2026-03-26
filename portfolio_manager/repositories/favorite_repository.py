@@ -45,6 +45,6 @@ class FavoriteRepository(BaseRepository[StockFavorite]):
         result = self.session.execute(stmt).scalar()
         return result or 0
 
-    def exists(self, symbol: str) -> bool:
+    def exists_by_symbol(self, symbol: str) -> bool:
         """检查股票是否已收藏"""
         return self.get_by_symbol(symbol) is not None
