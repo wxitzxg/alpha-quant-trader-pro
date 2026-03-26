@@ -15,6 +15,7 @@ from datetime import datetime
 class Quote(BaseModel):
     """实时行情数据模型"""
     symbol: str
+    name: Optional[str] = None          # 股票名称
     price: float
     change: float
     percent: float
@@ -23,6 +24,7 @@ class Quote(BaseModel):
     open_price: Optional[float] = None   # 开盘价
     high: Optional[float] = None         # 最高价
     low: Optional[float] = None          # 最低价
+    pre_close: Optional[float] = None    # 昨日收盘价
     bid_price: List[float] = Field(default_factory=list)
     bid_volume: List[int] = Field(default_factory=list)
     ask_price: List[float] = Field(default_factory=list)

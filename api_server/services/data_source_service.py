@@ -31,18 +31,19 @@ class DataSourceService:
             quote = QuoteAPI.get_realtime(stock_code)
             if quote:
                 # Quote 模型来自 data_sources/models.py，字段映射如下:
-                # symbol, price, change, percent, volume, amount
+                # symbol, name, price, change, percent, volume, amount, open_price, high, low, pre_close
                 exchange = "SH" if stock_code.startswith(('6', '9', '5')) else "SZ"
                 return {
                     "ts_code": f"{stock_code}.{exchange}",
                     "symbol": stock_code,
-                    "name": "",  # Quote 模型不包含名称
+                    "name": quote.name or "",
                     "current_price": float(quote.price or 0),
                     "change": float(quote.change or 0),
                     "change_pct": float(quote.percent or 0),
-                    "open": 0.0,  # Quote 模型不包含开盘价
-                    "high": 0.0,  # Quote 模型不包含最高价
-                    "low": 0.0,   # Quote 模型不包含最低价
+                    "open": float(quote.open_price or 0),
+                    "high": float(quote.high or 0),
+                    "low": float(quote.low or 0),
+                    "pre_close": float(quote.pre_close or 0),
                     "close": float(quote.price or 0),
                     "volume": int(quote.volume or 0),
                     "amount": float(quote.amount or 0),

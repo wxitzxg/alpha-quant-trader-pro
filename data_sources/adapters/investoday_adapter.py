@@ -214,9 +214,14 @@ class InvestodayAdapter(DataSourceAdapter):
             Quote 对象
         """
         symbol = data.get("stockCode", "")
+        name = data.get("stockName", "")
         price = float(data.get("currentPrice", 0) or 0)
+        open_price = float(data.get("openPrice", 0) or 0)
+        high = float(data.get("highPrice", 0) or 0)
+        low = float(data.get("lowPrice", 0) or 0)
+        pre_close = float(data.get("closePriceYDay", 0) or 0)
         change_pct = float(data.get("changeRatio", 0) or 0)  # 涨跌幅（小数形式）
-        change = price * change_pct if price > 0 else 0  # 涨跌额 = 现价 * 涨跌幅
+        change = price - pre_close if pre_close > 0 else 0  # 涨跌额
         volume = int(data.get("dealStockAmount", 0) or 0)  # 成交量（手）
         amount = float(data.get("dealMoney", 0) or 0)  # 成交额
 
@@ -228,7 +233,12 @@ class InvestodayAdapter(DataSourceAdapter):
 
         return Quote(
             symbol=symbol,
+            name=name,
             price=price,
+            open_price=open_price,
+            high=high,
+            low=low,
+            pre_close=pre_close,
             change=change,
             percent=change_pct,
             volume=volume,

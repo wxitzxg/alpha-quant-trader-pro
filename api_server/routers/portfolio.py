@@ -239,10 +239,26 @@ async def sync_position(request: PositionSyncRequest):
 
 
 def _get_favorite_service():
-    """获取收藏服务实例"""
-    from common.di_container import container
-    db_session = container.database_manager().get_session()
-    return container.create_portfolio_manager_container(db_session=db_session).favorite_service()
+    """获取收藏服务实例，返回 (service, session) 元组"""
+    import os
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from portfolio_manager.repositories.favorite_repository import FavoriteRepository
+    from portfolio_manager.services.favorite_service import FavoriteService
+
+    # 从环境变量获取数据库 URL，或使用默认配置
+    db_url = os.environ.get(
+        "DATABASE__URL",
+        "postgresql://alpha_quant_trader_pro:alpha_quant_trader_pro@alpha-quant-db:5432/alpha_quant_trader_pro"
+    )
+
+    # 创建引擎和 session
+    engine = create_engine(db_url)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+
+    repo = FavoriteRepository(session)
+    return FavoriteService(repo), session
 
 
 @portfolio_router.get("/portfolio/favorites", response_model=APIResponse)
@@ -252,7 +268,7 @@ async def get_favorites(
 ):
     """获取收藏列表（分页）"""
     try:
-        service = _get_favorite_service()
+        service, session = _get_favorite_service()
         favorites, total, total_pages = service.get_paginated(page=page, page_size=page_size)
 
         return APIResponse(
@@ -269,70 +285,88 @@ async def get_favorites(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting favorites: {str(e)}")
+    finally:
+        session.close()
 
 
 @portfolio_router.post("/portfolio/favorites/add", response_model=APIResponse)
 async def add_favorite(request: AddFavoriteRequest):
     """添加收藏"""
     try:
-        service = _get_favorite_service()
+        service, session = _get_favorite_service()
         result = service.add_favorite(
             symbol=request.symbol,
             tag=request.tag,
             note=request.note
         )
+        session.commit()  # 提交事务
 
         return APIResponse(
             data=result.model_dump(),
             message=f"Stock {request.symbol} added to favorites"
         )
     except BusinessError as e:
+        session.rollback()
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
+        session.rollback()
         raise HTTPException(status_code=500, detail=f"Error adding favorite: {str(e)}")
+    finally:
+        session.close()
 
 
 @portfolio_router.post("/portfolio/favorites/remove", response_model=APIResponse)
 async def remove_favorite(request: RemoveFavoriteRequest):
     """移除收藏"""
     try:
-        service = _get_favorite_service()
+        service, session = _get_favorite_service()
         service.remove_favorite(symbol=request.symbol)
+        session.commit()
 
         return APIResponse(
             data={"symbol": request.symbol},
             message=f"Stock {request.symbol} removed from favorites"
         )
     except NotFoundError as e:
+        session.rollback()
         raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
+        session.rollback()
         raise HTTPException(status_code=500, detail=f"Error removing favorite: {str(e)}")
+    finally:
+        session.close()
 
 
 @portfolio_router.post("/portfolio/favorites/update", response_model=APIResponse)
 async def update_favorite(request: UpdateFavoriteRequest):
     """更新收藏"""
     try:
-        service = _get_favorite_service()
+        service, session = _get_favorite_service()
         result = service.update_favorite(
             symbol=request.symbol,
             tag=request.tag,
             note=request.note
         )
+        session.commit()
 
         return APIResponse(
             data=result.model_dump(),
             message=f"Favorite {request.symbol} updated successfully"
         )
     except NotFoundError as e:
+        session.rollback()
         raise HTTPException(status_code=404, detail=str(e))
     except BusinessError as e:
+        session.rollback()
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
+        session.rollback()
         raise HTTPException(status_code=500, detail=f"Error updating favorite: {str(e)}")
+    finally:
+        session.close()
