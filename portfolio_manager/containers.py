@@ -4,8 +4,8 @@
 
 from dependency_injector import containers, providers
 from data_sources import DataSourceAggregator
-from portfolio_manager.repositories import PositionRepository, TransactionRepository, CashBalanceRepository
-from portfolio_manager.services import PositionService, TransactionService, AccountService
+from portfolio_manager.repositories import PositionRepository, TransactionRepository, CashBalanceRepository, FavoriteRepository
+from portfolio_manager.services import PositionService, TransactionService, AccountService, FavoriteService
 from portfolio_manager.fee_calculator import FeeCalculator
 from common.config import get_config
 
@@ -56,6 +56,11 @@ class PortfolioManagerContainer(containers.DeclarativeContainer):
         session=db_session
     )
 
+    favorite_repository = providers.Factory(
+        FavoriteRepository,
+        session=db_session
+    )
+
     # ========== 服务层 ==========
 
     position_service = providers.Factory(
@@ -79,6 +84,11 @@ class PortfolioManagerContainer(containers.DeclarativeContainer):
         fee_calculator=fee_calculator
     )
 
+    favorite_service = providers.Factory(
+        FavoriteService,
+        repository=favorite_repository
+    )
+
     # ========== 工具方法 ==========
 
     def get_services(self):
@@ -86,5 +96,6 @@ class PortfolioManagerContainer(containers.DeclarativeContainer):
         return {
             'position_service': self.position_service(),
             'transaction_service': self.transaction_service(),
-            'account_service': self.account_service()
+            'account_service': self.account_service(),
+            'favorite_service': self.favorite_service()
         }
