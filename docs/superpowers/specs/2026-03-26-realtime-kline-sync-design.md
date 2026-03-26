@@ -206,7 +206,13 @@ def sync_realtime_to_kline(
 **Quote → KLine 字段映射**:
 ```python
 # 注意：Pydantic Quote 与 ORM KLine 字段名差异
+# stock_id 需通过 stock_repo.get_by_symbol() 获取
+stock = stock_repo.get_by_symbol(quote.symbol)
+if not stock:
+    return {"status": "failed", "reason": "stock_not_found"}
+
 KLine(
+    stock_id=stock.id,             # 外键，需从 stocks 表获取
     symbol=quote.symbol,
     date=today,                    # 当前自然日
     interval=interval,
@@ -219,6 +225,8 @@ KLine(
     sync_time=datetime.now()
 )
 ```
+
+**幂等性说明**: 该接口支持幂等调用，多次调用同一股票会覆盖更新当日K线，不会产生重复记录。
 
 **事务策略**:
 - 每只股票使用独立的数据库会话
