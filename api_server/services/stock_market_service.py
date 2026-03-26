@@ -252,3 +252,36 @@ class StockMarketService:
                 "success": False,
                 "error": str(e)
             }
+
+    def sync_realtime_to_kline(
+        self,
+        stock_codes: List[str],
+        interval: str = "1d"
+    ) -> Dict:
+        """
+        从实时行情同步今日K线
+
+        Args:
+            stock_codes: 股票代码列表
+            interval: 周期
+
+        Returns:
+            同步结果
+        """
+        try:
+            session, _, kline_service = self._get_services()
+
+            result = kline_service.sync_realtime_to_kline(
+                symbols=stock_codes,
+                interval=interval
+            )
+
+            return {
+                "success": True,
+                "data": result
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
