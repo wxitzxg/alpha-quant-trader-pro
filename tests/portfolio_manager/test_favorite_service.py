@@ -108,6 +108,15 @@ class TestFavoriteService:
 
         assert len(result) == 2
 
+    def test_get_all_empty(self, service, favorite_repo):
+        """测试获取空收藏列表"""
+        favorite_repo.get_all.return_value = []
+
+        result = service.get_all()
+
+        assert result == []
+        assert len(result) == 0
+
     # === get_paginated 测试 ===
     def test_get_paginated_success(self, service, favorite_repo):
         """测试分页获取收藏"""
@@ -120,3 +129,14 @@ class TestFavoriteService:
         assert len(favorites) == 1
         assert total == 25
         assert total_pages == 2
+
+    def test_get_paginated_empty(self, service, favorite_repo):
+        """测试分页获取空结果集"""
+        favorite_repo.get_all_paginated.return_value = []
+        favorite_repo.count.return_value = 0
+
+        favorites, total, total_pages = service.get_paginated(page=1, page_size=20)
+
+        assert favorites == []
+        assert total == 0
+        assert total_pages == 0

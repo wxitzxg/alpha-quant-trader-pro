@@ -13,7 +13,7 @@ import math
 class FavoriteService:
     """股票收藏管理服务"""
 
-    def __init__(self, repository):
+    def __init__(self, repository: 'FavoriteRepository'):
         """
         初始化收藏服务
 
