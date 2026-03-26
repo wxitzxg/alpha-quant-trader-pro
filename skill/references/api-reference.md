@@ -8,14 +8,19 @@
 
 1. [健康检查](#健康检查)
 2. [数据源聚合](#数据源聚合)
-3. [新闻资讯](#新闻资讯)
-4. [财务数据](#财务数据)
-5. [资金流向](#资金流向)
-6. [技术分析](#技术分析)
-7. [持仓管理](#持仓管理)
+3. [股票市场同步](#股票市场同步)
+4. [技术指标](#技术指标)
+5. [综合分析](#综合分析)
+6. [持仓管理](#持仓管理)
+7. [收藏管理](#收藏管理)
 8. [模拟交易](#模拟交易)
 9. [风险控制](#风险控制)
-10. [回测系统](#回测系统)
+10. [风险提示](#风险提示)
+11. [收益统计](#收益统计)
+12. [回测系统](#回测系统)
+13. [财务数据](#财务数据)
+14. [资金流向](#资金流向)
+15. [新闻资讯](#新闻资讯)
 
 ---
 
@@ -28,9 +33,9 @@
 **响应示例**:
 ```json
 {
-  "success": true,
-  "message": "Service is healthy",
-  "data": {"status": "ok"}
+  "status": "healthy",
+  "version": "1.0.0",
+  "timestamp": "2024-01-01T00:00:00"
 }
 ```
 
@@ -46,7 +51,6 @@
 - `page` (int): 页码，最小值 1
 - `page_size` (int): 每页数量，范围 1-100
 - `exchange` (str, 可选): 交易所 (SH/SZ)
-- `category` (str, 可选): 股票分类
 
 **示例**:
 ```bash
@@ -68,15 +72,15 @@ curl "http://localhost:8000/api/v1/stock/list?page=1&page_size=20"
   "data": {
     "ts_code": "600519.SH",
     "symbol": "600519",
-    "name": "示例股票",
-    "current_price": 10.0,
-    "change": 0.5,
-    "change_pct": 5.0,
-    "open": 9.8,
-    "high": 10.2,
-    "low": 9.7,
-    "close": 9.5,
-    "volume": 100000
+    "name": "贵州茅台",
+    "current_price": 1688.0,
+    "change": 5.0,
+    "change_pct": 0.30,
+    "open": 1683.0,
+    "high": 1695.0,
+    "low": 1680.0,
+    "pre_close": 1683.0,
+    "volume": 1234567
   }
 }
 ```
@@ -88,8 +92,7 @@ curl "http://localhost:8000/api/v1/stock/list?page=1&page_size=20"
 **请求体**:
 ```json
 {
-  "symbols": ["600519", "000001", "601318"],
-  "fields": ["price", "change", "volume"]
+  "symbols": ["600519", "000001", "601318"]
 }
 ```
 
@@ -103,23 +106,32 @@ curl "http://localhost:8000/api/v1/stock/list?page=1&page_size=20"
 
 ### GET /kline/{stock_code}
 
-获取单只股票的历史K线数据。
+获取单只股票的历史K线数据（从数据库读取）。
 
 **参数**:
 - `stock_code` (str): 股票代码
-- `interval` (str): K线周期 (1m/5m/15m/30m/60m/1d/1w/1M)
-- `start_date` (str): 开始日期 (YYYY-MM-DD)
-- `end_date` (str): 结束日期 (YYYY-MM-DD)
-- `limit` (int, 可选): 限制返回数量
+- `interval` (str): K线周期，默认 "1d"
+- `start_date` (str, 可选): 开始日期 (YYYY-MM-DD)
+- `end_date` (str, 可选): 结束日期 (YYYY-MM-DD)
+- `limit` (int): 限制返回数量，默认 120
 
 **示例**:
 ```bash
-curl "http://localhost:8000/api/v1/kline/600519?interval=1d&start_date=2023-01-01&end_date=2023-12-31"
+curl "http://localhost:8000/api/v1/kline/600519?interval=1d&limit=30"
 ```
 
 ### POST /kline/batch
 
 批量获取多只股票的K线数据。
+
+**请求体**:
+```json
+{
+  "symbols": ["600519", "000001"],
+  "interval": "1d",
+  "limit": 120
+}
+```
 
 ### GET /kline/stats/{stock_code}
 
@@ -127,119 +139,104 @@ curl "http://localhost:8000/api/v1/kline/600519?interval=1d&start_date=2023-01-0
 
 **参数**:
 - `stock_code` (str): 股票代码
-- `period` (str): 统计周期 (如 "1y", "6m", "3m")
-
-### GET /financial/indicators/{stock_code}
-
-获取股票的财务指标。
+- `period` (str): 统计周期 (1y/6m/3m/1m)
 
 ---
 
-## 新闻资讯
+## 股票市场同步
 
-### GET /news/list
+### POST /market/stock/sync
 
-分页获取新闻列表。
+同步股票列表。
 
-**参数**:
-- `page` (int): 页码
-- `page_size` (int): 每页数量
-- `category` (str, 可选): 新闻分类
-- `start_date` (str, 可选): 开始日期
-- `end_date` (str, 可选): 结束日期
+**请求体**:
+```json
+{
+  "force_update": false
+}
+```
 
-### GET /news/{news_id}
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "task_id": "stock_sync_20240101_120000",
+    "sync_type": "stock",
+    "status": {
+      "status": "completed",
+      "progress": 100,
+      "total_count": 5000,
+      "completed_count": 5000
+    }
+  }
+}
+```
 
-获取新闻详细内容。
+### GET /market/stock/sync-status
 
-### GET /news/search
+获取股票同步状态。
 
-按关键词搜索新闻。
+### POST /market/kline/sync/{stock_code}
 
-**参数**:
-- `query` (str): 搜索关键词
-- `page` (int): 页码
-- `page_size` (int): 每页数量
-
----
-
-## 财务数据
-
-### GET /financial/balance-sheet/{stock_code}
-
-获取资产负债表。
-
-**参数**:
-- `stock_code` (str): 股票代码
-- `year` (int): 年份
-- `quarter` (int): 季度 (1-4)
-
-### GET /financial/income-statement/{stock_code}
-
-获取利润表。
-
-### GET /financial/cash-flow/{stock_code}
-
-获取现金流量表。
-
-### GET /financial/indicators/{stock_code}
-
-分页获取财务指标数据。
+同步单只股票的K线数据。
 
 **参数**:
-- `stock_code` (str): 股票代码
-- `start_date` (str, 可选): 开始日期
-- `end_date` (str, 可选): 结束日期
-- `page` (int): 页码
-- `page_size` (int): 每页数量
-
-### GET /financial/dupont/{stock_code}
-
-分页获取杜邦分析数据。
-
-### GET /financial/per-share/{stock_code}
-
-分页获取每股指标数据。
-
----
-
-## 资金流向
-
-### GET /fundflow/{stock_code}
-
-分页获取资金流向数据。
-
-**参数**:
-- `stock_code` (str): 股票代码
-- `start_date` (str, 可选): 开始日期
-- `end_date` (str, 可选): 结束日期
-- `page` (int): 页码
-- `page_size` (int): 每页数量
-
-### GET /fundflow/dragon-tiger/{stock_code}
-
-分页获取龙虎榜数据。
-
----
-
-## 技术分析
-
-### POST /indicators/base
-
-计算多种基础技术指标。
-
-**支持的指标**:
-- 趋势指标：MA5/10/20/50/200, EMA, MACD, ADX
-- 动量指标：RSI, Stochastic, CCI, Williams %R
-- 波动率指标：布林带, ATR, 标准差
-- 成交量指标：OBV, 量比
+- `stock_code` (str): 股票代码（路径参数）
 
 **请求体**:
 ```json
 {
   "stock_code": "600519",
-  "days": 120,
-  "indicators": ["ma", "macd", "rsi"]
+  "interval": "1d",
+  "start_date": "2023-01-01",
+  "end_date": "2023-12-31",
+  "force_update": false
+}
+```
+
+### POST /market/kline/sync-realtime
+
+从实时行情同步今日K线（批量）。
+
+**请求体**:
+```json
+{
+  "stock_codes": ["600519", "000001"],
+  "interval": "1d"
+}
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "total_count": 2,
+    "success_count": 2,
+    "failed_count": 0,
+    "skipped_count": 0,
+    "details": [
+      {"symbol": "600519", "status": "success", "reason": null},
+      {"symbol": "000001", "status": "success", "reason": null}
+    ]
+  }
+}
+```
+
+---
+
+## 技术指标
+
+### POST /indicators/base
+
+计算多种基础技术指标。
+
+**请求体**:
+```json
+{
+  "stock_code": "600519",
+  "days": 120
 }
 ```
 
@@ -270,7 +267,7 @@ GET 方式计算基础技术指标。
 
 **参数**:
 - `stock_code` (str): 股票代码
-- `days` (int): 回溯天数，最小值 1，最大值 365
+- `days` (int): 回溯天数
 
 ### POST /indicators/vcp
 
@@ -280,9 +277,7 @@ GET 方式计算基础技术指标。
 ```json
 {
   "stock_code": "600519",
-  "days": 120,
-  "min_drops": 2,
-  "max_drops": 4
+  "days": 120
 }
 ```
 
@@ -301,6 +296,10 @@ GET 方式计算基础技术指标。
 }
 ```
 
+### GET /indicators/vcp/{stock_code}
+
+GET 方式检测 VCP 形态。
+
 ### POST /indicators/td-sequential
 
 计算 TD 序列（神奇九转）。
@@ -309,9 +308,7 @@ GET 方式计算基础技术指标。
 ```json
 {
   "stock_code": "600519",
-  "days": 30,
-  "period": 9,
-  "compare_period": 4
+  "days": 30
 }
 ```
 
@@ -329,6 +326,27 @@ GET 方式计算基础技术指标。
 }
 ```
 
+### GET /indicators/td-sequential/{stock_code}
+
+GET 方式计算 TD 序列。
+
+### POST /indicators/divergence
+
+检测价格与指标之间的背离信号。
+
+**请求体**:
+```json
+{
+  "stock_code": "600519",
+  "days": 60,
+  "indicator": "macd"
+}
+```
+
+### GET /indicators/divergence/{stock_code}
+
+GET 方式检测背离。
+
 ### POST /indicators/zigzag
 
 计算 ZigZag 之字转向指标。
@@ -342,22 +360,13 @@ GET 方式计算基础技术指标。
 }
 ```
 
-### POST /indicators/divergence
+### GET /indicators/zigzag/{stock_code}
 
-检测价格与指标之间的背离信号。
+GET 方式计算 ZigZag。
 
-**背离类型**:
-- 顶背离：价格创新高，但指标未创新高 (看跌信号)
-- 底背离：价格创新低，但指标未创新低 (看涨信号)
+---
 
-**请求体**:
-```json
-{
-  "stock_code": "600519",
-  "days": 60,
-  "indicator": "macd"
-}
-```
+## 综合分析
 
 ### POST /analysis/five-dimension
 
@@ -401,6 +410,10 @@ GET 方式计算基础技术指标。
 
 执行 VCP 策略分析。
 
+**参数**:
+- `stock_code` (str): 股票代码
+- `days` (int): 回溯天数
+
 ### GET /analysis/strategy/td/{stock_code}
 
 执行九转黄金坑策略分析。
@@ -425,11 +438,33 @@ GET 方式计算基础技术指标。
     "total_market_value": 100000,
     "stock_market_value": 50000,
     "cash": 50000,
-    "total_floating_pl": 0,
-    "total_realized_pl": 0,
+    "total_profit": 0,
     "positions_count": 1
   }
 }
+```
+
+### GET /portfolio/account/cash
+
+获取账户现金余额。
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "cash": 50000
+  }
+}
+```
+
+### POST /portfolio/account/cash/add
+
+向账户充值。
+
+**请求体**:
+```json
+{"amount": 100000}
 ```
 
 ### GET /portfolio/positions
@@ -444,6 +479,9 @@ GET 方式计算基础技术指标。
 
 获取单只股票的持仓详情。
 
+**参数**:
+- `stock_code` (str): 股票代码
+
 ### POST /portfolio/trade/buy
 
 记录买入交易。
@@ -454,8 +492,7 @@ GET 方式计算基础技术指标。
   "stock_code": "600519",
   "quantity": 100,
   "price": 1688.5,
-  "trade_type": "buy",
-  "transaction_date": "2026-03-25"
+  "transaction_date": "2024-01-01"
 }
 ```
 
@@ -465,7 +502,7 @@ GET 方式计算基础技术指标。
   "success": true,
   "data": {
     "symbol": "600519",
-    "transaction_type": "buy",
+    "transaction_type": "BUY",
     "quantity": 100,
     "price": 1688.5,
     "amount": 168850.0,
@@ -483,23 +520,9 @@ GET 方式计算基础技术指标。
 {
   "stock_code": "600519",
   "quantity": 100,
-  "price": 1700.0,
-  "trade_type": "sell"
+  "price": 1700.0
 }
 ```
-
-### POST /portfolio/account/cash/add
-
-向账户充值。
-
-**请求体**:
-```json
-{"amount": 100000}
-```
-
-### GET /portfolio/account/cash
-
-获取账户现金余额。
 
 ### GET /portfolio/transactions
 
@@ -528,6 +551,77 @@ GET 方式计算基础技术指标。
 
 ---
 
+## 收藏管理
+
+### GET /portfolio/favorites
+
+分页获取收藏列表。
+
+**参数**:
+- `page` (int): 页码
+- `page_size` (int): 每页数量
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "favorites": [
+      {
+        "symbol": "600519",
+        "name": "贵州茅台",
+        "tag": "白酒",
+        "note": "龙头股",
+        "created_at": "2024-01-01T00:00:00"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "page_size": 20,
+    "total_pages": 1
+  }
+}
+```
+
+### POST /portfolio/favorites/add
+
+添加收藏。
+
+**请求体**:
+```json
+{
+  "symbol": "600519",
+  "tag": "白酒",
+  "note": "龙头股"
+}
+```
+
+### POST /portfolio/favorites/remove
+
+移除收藏。
+
+**请求体**:
+```json
+{
+  "symbol": "600519"
+}
+```
+
+### POST /portfolio/favorites/update
+
+更新收藏信息。
+
+**请求体**:
+```json
+{
+  "symbol": "600519",
+  "tag": "消费",
+  "note": "核心持仓"
+}
+```
+
+---
+
 ## 模拟交易
 
 ### POST /simulation/account
@@ -543,13 +637,29 @@ GET 方式计算基础技术指标。
 }
 ```
 
-### GET /simulation/account/{account_id}
-
-获取模拟账户的详细信息。
-
 ### GET /simulation/accounts
 
 获取所有模拟账户列表。
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "account_id": "acc_xxx",
+      "account_name": "测试账户1",
+      "initial_capital": 100000,
+      "current_balance": 95000,
+      "total_market_value": 50000
+    }
+  ]
+}
+```
+
+### GET /simulation/account/{account_id}
+
+获取模拟账户的详细信息。
 
 ### DELETE /simulation/account/{account_id}
 
@@ -562,7 +672,7 @@ GET 方式计算基础技术指标。
 **请求体**:
 ```json
 {
-  "account_id": "acc_12345",
+  "account_id": "acc_xxx",
   "symbol": "600519",
   "price": 1688.5,
   "quantity": 100
@@ -573,6 +683,16 @@ GET 方式计算基础技术指标。
 
 执行卖出操作。
 
+**请求体**:
+```json
+{
+  "account_id": "acc_xxx",
+  "symbol": "600519",
+  "price": 1700.0,
+  "quantity": 100
+}
+```
+
 ### GET /simulation/positions/{account_id}
 
 获取账户的持仓列表。
@@ -580,6 +700,9 @@ GET 方式计算基础技术指标。
 ### GET /simulation/trades/{account_id}
 
 获取账户的交易历史。
+
+**参数**:
+- `limit` (int): 返回条数，默认 20
 
 ---
 
@@ -598,6 +721,7 @@ GET 方式计算基础技术指标。
 {
   "success": true,
   "data": {
+    "stock_code": "600519",
     "risk_metrics": {
       "var_95": 0.02,
       "var_99": 0.03,
@@ -614,11 +738,6 @@ GET 方式计算基础技术指标。
 
 根据不同方法计算止损位。
 
-**支持的方法**:
-- `atr`: 平均真实波幅
-- `volatility`: 波动率
-- `percentage`: 固定百分比
-
 **请求体**:
 ```json
 {
@@ -627,6 +746,11 @@ GET 方式计算基础技术指标。
   "method": "atr"
 }
 ```
+
+**支持的方法**:
+- `atr`: 平均真实波幅
+- `volatility`: 波动率
+- `percentage`: 固定百分比
 
 ### GET /risk/diversification
 
@@ -654,6 +778,10 @@ GET 方式计算基础技术指标。
 **参数**:
 - `confidence_level` (float): 置信水平 (0.9-0.99)
 
+---
+
+## 风险提示
+
 ### GET /alerts/triggered
 
 获取所有已触发的预警。
@@ -669,6 +797,49 @@ GET 方式计算基础技术指标。
 ### POST /alerts/portfolio/monitor
 
 主动监控投资组合风险，生成风险建议。
+
+---
+
+## 收益统计
+
+### GET /performance/account/summary
+
+账户收益汇总。
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "metrics": {
+      "total_return": 0.15,
+      "annualized_return": 0.15,
+      "max_drawdown": 0.08,
+      "sharpe_ratio": 1.3,
+      "win_rate": 0.6
+    },
+    "transactions_count": 20,
+    "positions_count": 5
+  }
+}
+```
+
+### GET /performance/stock/{stock_code}
+
+单只股票收益统计。
+
+### GET /performance/history
+
+历史收益曲线。
+
+**参数**:
+- `start_date` (str, 可选): 开始日期
+- `end_date` (str, 可选): 结束日期
+- `period` (str): 统计周期 (daily/weekly/monthly)
+
+### GET /performance/compare
+
+收益对比分析。
 
 ---
 
@@ -754,6 +925,93 @@ GET 方式计算基础技术指标。
   "format": "html"
 }
 ```
+
+---
+
+## 财务数据
+
+### GET /financial/indicators/{stock_code}
+
+获取财务指标数据（分页）。
+
+**参数**:
+- `stock_code` (str): 股票代码
+- `start_date` (str, 可选): 开始日期
+- `end_date` (str, 可选): 结束日期
+- `page` (int): 页码
+- `page_size` (int): 每页数量
+
+### GET /financial/balance-sheet/{stock_code}
+
+获取资产负债表。
+
+**参数**:
+- `stock_code` (str): 股票代码
+- `year` (int): 年份
+- `quarter` (int): 季度 (1-4)
+
+### GET /financial/income-statement/{stock_code}
+
+获取利润表。
+
+### GET /financial/cash-flow/{stock_code}
+
+获取现金流量表。
+
+### GET /financial/dupont/{stock_code}
+
+获取杜邦分析数据（分页）。
+
+### GET /financial/per-share/{stock_code}
+
+获取每股指标数据（分页）。
+
+---
+
+## 资金流向
+
+### GET /fundflow/{stock_code}
+
+获取资金流向数据（分页）。
+
+**参数**:
+- `stock_code` (str): 股票代码
+- `start_date` (str, 可选): 开始日期
+- `end_date` (str, 可选): 结束日期
+- `page` (int): 页码
+- `page_size` (int): 每页数量
+
+### GET /fundflow/dragon-tiger/{stock_code}
+
+获取龙虎榜数据（分页）。
+
+---
+
+## 新闻资讯
+
+### GET /news/list
+
+分页获取新闻列表。
+
+**参数**:
+- `page` (int): 页码
+- `page_size` (int): 每页数量
+- `category` (str, 可选): 新闻分类
+- `start_date` (str, 可选): 开始日期
+- `end_date` (str, 可选): 结束日期
+
+### GET /news/{news_id}
+
+获取新闻详细内容。
+
+### GET /news/search
+
+按关键词搜索新闻。
+
+**参数**:
+- `query` (str): 搜索关键词
+- `page` (int): 页码
+- `page_size` (int): 每页数量
 
 ---
 
