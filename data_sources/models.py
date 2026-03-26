@@ -20,6 +20,9 @@ class Quote(BaseModel):
     percent: float
     volume: int
     amount: float
+    open_price: Optional[float] = None   # 开盘价
+    high: Optional[float] = None         # 最高价
+    low: Optional[float] = None          # 最低价
     bid_price: List[float] = Field(default_factory=list)
     bid_volume: List[int] = Field(default_factory=list)
     ask_price: List[float] = Field(default_factory=list)

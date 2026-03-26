@@ -137,6 +137,9 @@ class SinaAdapter(DataSourceAdapter):
             return Quote(
                 symbol=symbol,
                 price=current,
+                open_price=open_price,
+                high=high,
+                low=low,
                 change=change,
                 percent=percent,
                 volume=volume,
@@ -183,7 +186,11 @@ class SinaAdapter(DataSourceAdapter):
                 if len(values) < 9:
                     continue
 
+                # 解析 OHLC
+                open_price = float(values[1]) if values[1] else 0.0
                 current = float(values[3]) if values[3] else 0.0
+                high = float(values[4]) if values[4] else 0.0
+                low = float(values[5]) if values[5] else 0.0
                 pre_close = float(values[2]) if values[2] else 0.0
                 change = current - pre_close
                 percent = change / pre_close if pre_close != 0 else 0.0
@@ -191,6 +198,9 @@ class SinaAdapter(DataSourceAdapter):
                 quote = Quote(
                     symbol=symbol,
                     price=current,
+                    open_price=open_price,
+                    high=high,
+                    low=low,
                     change=change,
                     percent=percent,
                     volume=int(values[8]) if values[8] else 0,

@@ -8,7 +8,10 @@ from ..models.common import APIResponse
 from ..models.stock_market import (
     StockSyncParams,
     KLineSyncParams,
-    SyncStatusResponse
+    SyncStatusResponse,
+    RealtimeKLineSyncParams,
+    RealtimeKLineSyncData,
+    RealtimeKLineSyncDetail
 )
 from ..services import StockMarketService
 
@@ -109,3 +112,58 @@ async def sync_kline(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error syncing kline: {str(e)}")
+
+
+@stock_market_router.post("/market/kline/sync-realtime", response_model=APIResponse[RealtimeKLineSyncData])
+async def sync_realtime_kline(params: RealtimeKLineSyncParams):
+    """
+    从实时行情同步今日K线
+
+    批量获取股票实时行情并同步到K线历史数据表。
+    支持覆盖更新已存在的当日K线记录。
+
+    - **stock_codes**: 股票代码列表，最多100只
+    - **interval**: 周期，仅支持 1d（日线）
+    """
+    # 参数校验
+    if params.interval != "1d":
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid interval, only '1d' is supported"
+        )
+
+    try:
+        result = service.sync_realtime_to_kline(
+            stock_codes=params.stock_codes,
+            interval=params.interval
+        )
+
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=result.get("error", "Failed to sync realtime kline")
+            )
+
+        data = result.get("data", {})
+
+        return APIResponse(
+            data=RealtimeKLineSyncData(
+                total_count=data.get("total_count", 0),
+                success_count=data.get("success_count", 0),
+                failed_count=data.get("failed_count", 0),
+                skipped_count=data.get("skipped_count", 0),
+                details=[
+                    RealtimeKLineSyncDetail(
+                        symbol=d.get("symbol"),
+                        status=d.get("status"),
+                        reason=d.get("reason")
+                    )
+                    for d in data.get("details", [])
+                ]
+            ),
+            message="同步完成"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error syncing realtime kline: {str(e)}")
