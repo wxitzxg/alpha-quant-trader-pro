@@ -225,3 +225,107 @@ async def sync_position(request: PositionSyncRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error syncing position: {str(e)}")
+
+
+# ==================== 股票收藏管理 ====================
+
+from portfolio_manager.schemas.favorite_schemas import (
+    AddFavoriteRequest,
+    RemoveFavoriteRequest,
+    UpdateFavoriteRequest,
+    FavoriteResponse
+)
+from portfolio_manager.services.favorite_service import FavoriteService
+from common.exceptions import BusinessError, NotFoundError
+
+
+def _get_favorite_service():
+    """获取收藏服务实例"""
+    from common.di_container import container
+    db_session = container.database_manager().get_session()
+    return container.create_portfolio_manager_container(db_session=db_session).favorite_service()
+
+
+@portfolio_router.get("/portfolio/favorites", response_model=APIResponse)
+async def get_favorites(
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量")
+):
+    """获取收藏列表（分页）"""
+    try:
+        service = _get_favorite_service()
+        favorites, total, total_pages = service.get_paginated(page=page, page_size=page_size)
+
+        return APIResponse(
+            data={
+                "favorites": [f.model_dump() for f in favorites],
+                "total": total,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": total_pages
+            },
+            message="Favorites retrieved successfully"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting favorites: {str(e)}")
+
+
+@portfolio_router.post("/portfolio/favorites/add", response_model=APIResponse)
+async def add_favorite(request: AddFavoriteRequest):
+    """添加收藏"""
+    try:
+        service = _get_favorite_service()
+        result = service.add_favorite(
+            symbol=request.symbol,
+            tag=request.tag,
+            note=request.note
+        )
+
+        return APIResponse(
+            data=result.model_dump(),
+            message=f"Stock {request.symbol} added to favorites"
+        )
+    except BusinessError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding favorite: {str(e)}")
+
+
+@portfolio_router.post("/portfolio/favorites/remove", response_model=APIResponse)
+async def remove_favorite(request: RemoveFavoriteRequest):
+    """移除收藏"""
+    try:
+        service = _get_favorite_service()
+        service.remove_favorite(symbol=request.symbol)
+
+        return APIResponse(
+            data={"symbol": request.symbol},
+            message=f"Stock {request.symbol} removed from favorites"
+        )
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error removing favorite: {str(e)}")
+
+
+@portfolio_router.post("/portfolio/favorites/update", response_model=APIResponse)
+async def update_favorite(request: UpdateFavoriteRequest):
+    """更新收藏"""
+    try:
+        service = _get_favorite_service()
+        result = service.update_favorite(
+            symbol=request.symbol,
+            tag=request.tag,
+            note=request.note
+        )
+
+        return APIResponse(
+            data=result.model_dump(),
+            message=f"Favorite {request.symbol} updated successfully"
+        )
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except BusinessError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating favorite: {str(e)}")
