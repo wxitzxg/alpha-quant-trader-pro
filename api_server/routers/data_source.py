@@ -21,6 +21,7 @@ from ..models.kline import (
     KLineStats
 )
 from ..services.data_source_service import DataSourceService
+from ..services.stock_market_service import StockMarketService
 
 data_source_router = APIRouter()
 
@@ -104,12 +105,22 @@ async def get_kline(
     end_date: Optional[str] = Query(None, description="结束日期"),
     limit: int = Query(120, ge=1, le=1000, description="数据条数")
 ):
-    """获取K线数据"""
-    klines_data = DataSourceService.get_kline(
-        stock_code, interval, start_date, end_date, limit
+    """获取K线数据（从数据库读取）"""
+    result = StockMarketService().get_kline_data(
+        stock_code=stock_code,
+        interval=interval,
+        start_date=start_date,
+        end_date=end_date,
+        limit=limit
     )
-    if klines_data is None:
+
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Failed to get kline data"))
+
+    klines_data = result.get("data", [])
+    if not klines_data:
         raise HTTPException(status_code=404, detail=f"KLine data not found for {stock_code}")
+
     klines = [KLine(**k) for k in klines_data]
     return APIResponse(
         data=KLineResponse(
@@ -127,9 +138,20 @@ async def get_kline(
 
 @data_source_router.post("/kline/batch", response_model=APIResponse[BatchKLineResponse])
 async def get_batch_klines(request: BatchKLineRequest):
-    """批量获取K线"""
+    """批量获取K线（从数据库读取）"""
     try:
-        result = DataSourceService.get_batch_klines(request.symbols, request.interval)
+        stock_market_service = StockMarketService()
+        result = {}
+
+        for symbol in request.symbols:
+            kline_result = stock_market_service.get_kline_data(
+                stock_code=symbol,
+                interval=request.interval,
+                limit=request.limit
+            )
+            if kline_result.get("success"):
+                result[symbol] = kline_result.get("data", [])
+
         return APIResponse(
             data=BatchKLineResponse(data=result, timestamp=datetime.now()),
             message="Batch KLine data retrieved successfully"
