@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 from datetime import datetime, date, timedelta
 from stock_market.models import KLine, SyncRecord
 from stock_market.repositories import KLineRepository, SyncRecordRepository, StockRepository
@@ -281,3 +281,162 @@ class KLineService:
             **kwargs
         )
         self.sync_repo.add(record)
+
+    def sync_realtime_to_kline(
+        self,
+        symbols: List[str],
+        interval: str = "1d"
+    ) -> Dict[str, Any]:
+        """
+        从实时行情同步今日K线
+
+        Args:
+            symbols: 股票代码列表
+            interval: 周期（仅支持 1d）
+
+        Returns:
+            {
+                "total_count": 10,
+                "success_count": 8,
+                "failed_count": 2,
+                "skipped_count": 0,
+                "details": [...]
+            }
+        """
+        # 事务策略：每只股票独立提交，失败不影响其他股票
+        from data_sources import DataSourceAggregator
+
+        logger.info(f"Starting realtime to kline sync for {len(symbols)} symbols")
+
+        aggregator = DataSourceAggregator()
+
+        # 批量获取实时行情
+        try:
+            quotes = aggregator.batch_get_realtime(symbols)
+        except Exception as e:
+            logger.error(f"Failed to get realtime quotes: {e}")
+            return {
+                "total_count": len(symbols),
+                "success_count": 0,
+                "failed_count": len(symbols),
+                "skipped_count": 0,
+                "details": [
+                    {"symbol": s, "status": "failed", "reason": "data_source_error"}
+                    for s in symbols
+                ]
+            }
+
+        today = date.today()
+        details = []
+        success_count = 0
+        failed_count = 0
+        skipped_count = 0
+
+        # 用于记录哪些 symbol 在 quotes 中
+        quote_symbols = {q.symbol for q in quotes}
+
+        # 处理未返回行情的股票
+        for symbol in symbols:
+            if symbol not in quote_symbols:
+                details.append({
+                    "symbol": symbol,
+                    "status": "failed",
+                    "reason": "data_source_error"
+                })
+                failed_count += 1
+
+        # 处理返回的行情
+        for quote in quotes:
+            # 检查 OHLC 数据是否完整
+            if not quote.open_price or not quote.high or not quote.low:
+                logger.warning(f"Quote for {quote.symbol} missing OHLC data")
+                details.append({
+                    "symbol": quote.symbol,
+                    "status": "skipped",
+                    "reason": "no_ohlc_data"
+                })
+                skipped_count += 1
+                continue
+
+            try:
+                # 获取 stock_id
+                stock = self.stock_repo.get_by_symbol(quote.symbol)
+                if not stock:
+                    logger.warning(f"Stock {quote.symbol} not found in database")
+                    details.append({
+                        "symbol": quote.symbol,
+                        "status": "failed",
+                        "reason": "stock_not_found"
+                    })
+                    failed_count += 1
+                    continue
+
+                # 查询当日K线是否存在
+                existing = self.repo.get_by_symbol_and_date(
+                    symbol=quote.symbol,
+                    interval=interval,
+                    start_date=today.strftime("%Y-%m-%d"),
+                    end_date=today.strftime("%Y-%m-%d")
+                )
+
+                if existing and len(existing) > 0:
+                    # 覆盖更新
+                    kline = existing[0]
+                    kline.open = quote.open_price
+                    kline.high = quote.high
+                    kline.low = quote.low
+                    kline.close = quote.price
+                    kline.volume = quote.volume
+                    kline.amount = quote.amount
+                    kline.sync_time = datetime.now()
+                    logger.debug(f"Updated kline: {quote.symbol} {today}")
+                else:
+                    # 新增
+                    kline = KLine(
+                        stock_id=stock.id,
+                        symbol=quote.symbol,
+                        date=today,
+                        interval=interval,
+                        open=quote.open_price,
+                        high=quote.high,
+                        low=quote.low,
+                        close=quote.price,
+                        volume=quote.volume,
+                        amount=quote.amount,
+                        source="realtime",
+                        sync_time=datetime.now()
+                    )
+                    self.repo.add(kline)
+                    logger.debug(f"Added kline: {quote.symbol} {today}")
+
+                # 提交单只股票的事务
+                self.repo.session.commit()
+                success_count += 1
+                details.append({
+                    "symbol": quote.symbol,
+                    "status": "updated",
+                    "reason": None
+                })
+
+            except Exception as e:
+                logger.error(f"Failed to sync kline for {quote.symbol}: {e}")
+                self.repo.session.rollback()
+                details.append({
+                    "symbol": quote.symbol,
+                    "status": "failed",
+                    "reason": "db_error"
+                })
+                failed_count += 1
+
+        logger.info(
+            f"Realtime sync completed: total={len(symbols)}, "
+            f"success={success_count}, failed={failed_count}, skipped={skipped_count}"
+        )
+
+        return {
+            "total_count": len(symbols),
+            "success_count": success_count,
+            "failed_count": failed_count,
+            "skipped_count": skipped_count,
+            "details": details
+        }
