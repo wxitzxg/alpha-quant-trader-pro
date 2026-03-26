@@ -81,6 +81,3 @@ class StockFavorite(Base):
     __table_args__ = (
         Index('idx_stock_favorites_created_at', created_at.desc()),
     )
-
-    def __repr__(self):
-        return f"<StockFavorite({self.symbol}, tag={self.tag})>"
