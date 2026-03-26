@@ -799,6 +799,50 @@ curl -X POST http://localhost:8000/api/v1/market/kline/sync/600519 \
 }
 ```
 
+### 4. 同步实时K线
+
+**接口**: `POST /api/v1/market/kline/sync-realtime`
+**用途**: 从实时行情同步今日K线数据到历史K线表
+
+**请求体**:
+```json
+{
+  "stock_codes": ["600519", "000001", "601318"],
+  "interval": "1d"
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/market/kline/sync-realtime \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stock_codes": ["600519", "000001", "601318"],
+    "interval": "1d"
+  }'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "同步完成",
+  "data": {
+    "total_count": 3,
+    "success_count": 3,
+    "failed_count": 0,
+    "skipped_count": 0,
+    "details": [
+      {
+        "symbol": "600519",
+        "status": "success",
+        "reason": null
+      }
+    ]
+  }
+}
+```
+
 ---
 
 # 二、技术分析
@@ -1546,6 +1590,143 @@ curl -X POST http://localhost:8000/api/v1/portfolio/positions/sync \
     "current_price": 1700.0,
     "market_value": 170000.0,
     "floating_pl": 1150.0
+  }
+}
+```
+
+### 10. 获取收藏列表
+
+**接口**: `GET /api/v1/portfolio/favorites`
+**用途**: 分页获取收藏的股票列表
+
+**参数**:
+- `page` (int): 页码，最小值 1
+- `page_size` (int): 每页数量，范围 1-100
+
+**请求示例**:
+```bash
+curl "http://localhost:8000/api/v1/portfolio/favorites?page=1&page_size=20"
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Favorites retrieved successfully",
+  "data": {
+    "favorites": [],
+    "total": 0,
+    "page": 1,
+    "page_size": 20,
+    "total_pages": 0
+  }
+}
+```
+
+### 11. 添加收藏
+
+**接口**: `POST /api/v1/portfolio/favorites/add`
+**用途**: 将股票添加到收藏列表
+
+**请求体**:
+```json
+{
+  "symbol": "600519",
+  "tag": "白酒龙头",
+  "note": "茅台，长期持有"
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/portfolio/favorites/add \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "600519",
+    "tag": "白酒龙头",
+    "note": "茅台，长期持有"
+  }'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Stock 600519 added to favorites",
+  "data": {
+    "symbol": "600519",
+    "tag": "白酒龙头",
+    "note": "茅台，长期持有",
+    "created_at": "2026-03-25T14:30:00"
+  }
+}
+```
+
+### 12. 移除收藏
+
+**接口**: `POST /api/v1/portfolio/favorites/remove`
+**用途**: 从收藏列表中移除股票
+
+**请求体**:
+```json
+{
+  "symbol": "600519"
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/portfolio/favorites/remove \
+  -H "Content-Type: application/json" \
+  -d '{"symbol": "600519"}'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Stock 600519 removed from favorites",
+  "data": {
+    "symbol": "600519"
+  }
+}
+```
+
+### 13. 更新收藏
+
+**接口**: `POST /api/v1/portfolio/favorites/update`
+**用途**: 更新收藏股票的标签和备注
+
+**请求体**:
+```json
+{
+  "symbol": "600519",
+  "tag": "核心持仓",
+  "note": "茅台，目标价2000"
+}
+```
+
+**请求示例**:
+```bash
+curl -X POST http://localhost:8000/api/v1/portfolio/favorites/update \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "600519",
+    "tag": "核心持仓",
+    "note": "茅台，目标价2000"
+  }'
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "message": "Favorite 600519 updated successfully",
+  "data": {
+    "symbol": "600519",
+    "tag": "核心持仓",
+    "note": "茅台，目标价2000",
+    "updated_at": "2026-03-25T14:35:00"
   }
 }
 ```
