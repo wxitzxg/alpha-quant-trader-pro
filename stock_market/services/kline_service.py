@@ -348,7 +348,7 @@ class KLineService:
         # 处理返回的行情
         for quote in quotes:
             # 检查 OHLC 数据是否完整
-            if not quote.open_price or not quote.high or not quote.low:
+            if quote.open_price is None or quote.high is None or quote.low is None:
                 logger.warning(f"Quote for {quote.symbol} missing OHLC data")
                 details.append({
                     "symbol": quote.symbol,
