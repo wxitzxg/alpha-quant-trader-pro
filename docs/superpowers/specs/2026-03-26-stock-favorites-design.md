@@ -34,10 +34,11 @@
 ```sql
 CREATE TABLE stock_favorites (
     id SERIAL PRIMARY KEY,
-    symbol VARCHAR(10) NOT NULL UNIQUE,
+    symbol VARCHAR(20) NOT NULL UNIQUE,
     tag VARCHAR(50),
     note VARCHAR(200),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_stock_favorites_created_at ON stock_favorites(created_at DESC);
@@ -48,10 +49,11 @@ CREATE INDEX idx_stock_favorites_created_at ON stock_favorites(created_at DESC);
 | 字段 | 类型 | 约束 | 说明 |
 |------|------|------|------|
 | id | Integer | PK, Auto | 主键 |
-| symbol | String(10) | NOT NULL, UNIQUE | 股票代码 |
+| symbol | String(20) | NOT NULL, UNIQUE | 股票代码（与 Position 模型一致） |
 | tag | String(50) | NULL | 标签，自由文本 |
 | note | String(200) | NULL | 备注说明 |
 | created_at | DateTime | NOT NULL | 添加时间 |
+| updated_at | DateTime | NOT NULL | 更新时间（自动更新） |
 
 ---
 
@@ -104,8 +106,10 @@ class RemoveFavoriteRequest(BaseModel):
 ```python
 class UpdateFavoriteRequest(BaseModel):
     symbol: str           # 股票代码
-    tag: Optional[str]    # 新标签
-    note: Optional[str]   # 新备注
+    tag: Optional[str]    # 新标签（不传表示不修改，传 null 表示清空）
+    note: Optional[str]   # 新备注（不传表示不修改，传 null 表示清空）
+
+    # 至少需要提供一个更新字段
 ```
 
 #### 收藏信息响应
@@ -115,6 +119,19 @@ class FavoriteInfo(BaseModel):
     tag: Optional[str]
     note: Optional[str]
     created_at: datetime
+    updated_at: datetime
+```
+
+#### 分页列表响应
+```python
+# GET /portfolio/favorites 返回格式
+{
+    "favorites": [FavoriteInfo, ...],
+    "total": int,
+    "page": int,
+    "page_size": int,
+    "total_pages": int
+}
 ```
 
 ---
@@ -145,6 +162,14 @@ class FavoriteInfo(BaseModel):
 2. 按创建时间倒序排序
 3. 返回总数和分页信息
 
+### 5.5 错误处理
+
+| 场景 | HTTP 状态码 | 错误信息 |
+|------|------------|----------|
+| 添加重复股票 | 400 | "股票已收藏" |
+| 移除/更新不存在的股票 | 404 | "未找到收藏记录" |
+| 更新请求无更新字段 | 400 | "至少提供一个更新字段" |
+
 ---
 
 ## 6. 测试要点
@@ -170,4 +195,5 @@ class FavoriteInfo(BaseModel):
 2. Schema：`schemas/favorite_schemas.py`
 3. Repository：`repositories/favorite_repository.py`
 4. Service：`services/favorite_service.py`
-5. API 路由：`api_server/routers/portfolio.py` 新增接口
+5. DI 容器：`containers.py` 注册 FavoriteService
+6. API 路由：`api_server/routers/portfolio.py` 新增接口
