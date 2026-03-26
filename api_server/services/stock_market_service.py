@@ -193,6 +193,7 @@ class StockMarketService:
                 "success": True,
                 "data": [
                     {
+                        "ts_code": f"{k.symbol}.SH" if k.symbol.startswith(('6', '9', '5')) else f"{k.symbol}.SZ",
                         "symbol": k.symbol,
                         "trade_date": k.date.isoformat() if k.date else "",
                         "open": float(k.open),
@@ -236,8 +237,8 @@ class StockMarketService:
                             "sync_type": latest.sync_type,
                             "status": latest.status,
                             "records_count": latest.records_count,
-                            "start_time": latest.start_time.isoformat() if latest.start_time else None,
-                            "end_time": latest.end_time.isoformat() if latest.end_time else None,
+                            "start_time": latest.created_at.isoformat() if latest.created_at else None,
+                            "end_time": latest.updated_at.isoformat() if latest.updated_at else None,
                             "error_message": latest.error_message
                         }
                     }
