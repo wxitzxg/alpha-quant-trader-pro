@@ -35,19 +35,29 @@ async def calculate_base_indicators(request: AnalysisRequest):
     """
     try:
         # 获取K线数据
-        klines = StockMarketService.get_kline(
+        service = StockMarketService()
+        result = service.get_kline_data(
             stock_code=request.stock_code,
-            start_date=None,
-            end_date=None,
+            interval="1d",
             limit=request.days
         )
 
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "获取K线数据失败"))
+
+        klines = result.get("data", [])
+        
         if not klines or len(klines) < 20:
             raise HTTPException(status_code=400, detail="K线数据不足，至少需要20个交易日")
 
         # 转换为DataFrame格式
         import pandas as pd
         df = pd.DataFrame(klines)
+        
+        # 设置日期为索引
+        df['trade_date'] = pd.to_datetime(df['trade_date'])
+        df.set_index('trade_date', inplace=True)
+        df = df.sort_index()  # 按日期升序排列
 
         # 计算基础指标
         indicator_calculator = BaseIndicators(df)

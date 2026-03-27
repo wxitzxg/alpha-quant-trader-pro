@@ -177,12 +177,33 @@ async def get_kline_stats(
 
 # ========== 财务数据 ==========
 @data_source_router.get("/financial/indicators/{stock_code}", response_model=APIResponse)
-async def get_financial_indicators(stock_code: str = Path(..., description="股票代码")):
+async def get_financial_indicators(
+    stock_code: str = Path(..., description="股票代码"),
+    start_date: Optional[str] = Query(None, description="开始日期 (YYYY-MM-DD)"),
+    end_date: Optional[str] = Query(None, description="结束日期 (YYYY-MM-DD)"),
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(20, ge=1, le=100, description="每页数量")
+):
     """获取财务指标"""
-    result = DataSourceService.get_financial_indicators(stock_code)
+    from ..services.financial_service import FinancialService
+    financial_service = FinancialService()
+    result = financial_service.get_financial_indicators(
+        symbol=stock_code,
+        start_date=start_date,
+        end_date=end_date,
+        page=page,
+        page_size=page_size
+    )
     if not result.get("success"):
         raise HTTPException(status_code=404, detail=result.get("message"))
     return APIResponse(
-        data=result["data"],
+        data={
+            "stock_code": stock_code,
+            "page": page,
+            "page_size": page_size,
+            "total": result.get('total', 0),
+            "total_pages": result.get('total_pages', 0),
+            "indicators": result.get('data', []),
+        },
         message="Financial indicators retrieved successfully"
     )

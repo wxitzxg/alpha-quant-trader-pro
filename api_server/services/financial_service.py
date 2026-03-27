@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""财务数据服务层 - 集成 Investoday 数据源"""
+"""财务数据服务层 - 支持多数据源"""
 
 import sys
 import os
@@ -9,7 +9,7 @@ from typing import Optional, List, Dict
 from datetime import datetime
 from decimal import Decimal
 
-from data_sources.adapters.investoday_adapter import InvestodayAdapter
+from data_sources.aggregator import DataSourceAggregator
 from data_sources.exceptions import DataSourceError
 from common.config import get_config
 
@@ -19,17 +19,8 @@ class FinancialService:
 
     def __init__(self):
         """初始化财务数据服务"""
-        config = get_config()
-        # 获取 Investoday 数据源的超时配置
-        fund_flows_config = None
-        for source in config.data_sources.sources.fund_flows:
-            if source.name == "investoday":
-                fund_flows_config = source
-                break
-
-        timeout = fund_flows_config.timeout if fund_flows_config else config.data_sources.timeout
-
-        self.data_source = InvestodayAdapter(timeout=timeout)
+        # 使用 DataSourceAggregator 支持多数据源
+        self.aggregator = DataSourceAggregator()
 
     def get_balance_sheet(
         self,
@@ -49,7 +40,7 @@ class FinancialService:
             资产负债表数据
         """
         try:
-            result = self.data_source.get_balance_sheet(
+            result = self.aggregator.get_balance_sheet(
                 symbol=symbol,
                 year=year,
                 quarter=quarter
@@ -105,7 +96,7 @@ class FinancialService:
             利润表数据
         """
         try:
-            result = self.data_source.get_income_statement(
+            result = self.aggregator.get_income_statement(
                 symbol=symbol,
                 year=year,
                 quarter=quarter
@@ -161,7 +152,7 @@ class FinancialService:
             现金流量表数据
         """
         try:
-            result = self.data_source.get_cash_flow_statement(
+            result = self.aggregator.get_cash_flow_statement(
                 symbol=symbol,
                 year=year,
                 quarter=quarter
@@ -221,24 +212,110 @@ class FinancialService:
             财务指标列表
         """
         try:
-            all_items = self.data_source.get_financial_indicators(
-                symbol=symbol,
-                start_date=start_date,
-                end_date=end_date
-            )
+            from datetime import datetime
+            import akshare as ak
+            
+            # 确定要查询的报告期
+            if end_date:
+                dt = datetime.strptime(end_date, "%Y-%m-%d")
+                year = dt.year
+                quarter = (dt.month - 1) // 3 + 1
+            else:
+                dt = datetime.now()
+                year = dt.year
+                quarter = (dt.month - 1) // 3 + 1
+                # 如果是季度初，使用上一季度数据
+                if dt.day < 15 and quarter > 1:
+                    quarter -= 1
+
+            # 季度对应的报告期日期
+            def get_quarter_date(y, q):
+                dates = {1: f"{y}0331", 2: f"{y}0630", 3: f"{y}0930", 4: f"{y}1231"}
+                return dates.get(q)
+            
+            report_date = get_quarter_date(year, quarter)
+            
+            # 尝试获取数据，如果失败或找不到股票则往前推季度
+            df = None
+            found_year = year
+            found_quarter = quarter
+            max_retries = 8  # 最多尝试 8 次（往前推 2 年）
+            
+            for _ in range(max_retries):
+                try:
+                    test_df = ak.stock_yjbb_em(date=report_date)
+                    # 检查是否有足够的数据和目标股票
+                    if test_df is not None and len(test_df) > 1000:
+                        row = test_df[test_df['股票代码'] == symbol]
+                        if not row.empty:
+                            df = test_df
+                            break
+                except:
+                    pass
+                
+                # 往前推一个季度
+                quarter -= 1
+                if quarter <= 0:
+                    quarter = 4
+                    year -= 1
+                report_date = get_quarter_date(year, quarter)
+            
+            # 从 DataFrame 中提取指标
+            items_list = []
+            if df is not None:
+                row = df[df['股票代码'] == symbol]
+                if not row.empty:
+                    r = row.iloc[0]
+                    indicators = {}
+                    
+                    # 提取各项指标
+                    roe = r.get('净资产收益率')
+                    if roe is not None:
+                        indicators['roe'] = float(roe) / 100
+                    
+                    gross_margin = r.get('销售毛利率')
+                    if gross_margin is not None:
+                        indicators['gross_margin'] = float(gross_margin) / 100
+                    
+                    eps = r.get('每股收益')
+                    if eps is not None:
+                        indicators['eps'] = float(eps)
+                    
+                    bvps = r.get('每股净资产')
+                    if bvps is not None:
+                        indicators['bvps'] = float(bvps)
+                    
+                    ocfps = r.get('每股经营现金流量')
+                    if ocfps is not None:
+                        indicators['ocfps'] = float(ocfps)
+                    
+                    net_profit_growth = r.get('净利润-同比增长')
+                    if net_profit_growth is not None:
+                        indicators['net_profit_growth'] = float(net_profit_growth) / 100
+                    
+                    revenue_growth = r.get('营业总收入-同比增长')
+                    if revenue_growth is not None:
+                        indicators['revenue_growth'] = float(revenue_growth) / 100
+                    
+                    items_list = [{
+                        "symbol": symbol,
+                        "year": year,
+                        "quarter": quarter,
+                        **indicators
+                    }]
 
             # 分页
             start = (page - 1) * page_size
             end = start + page_size
-            paginated_items = all_items[start:end]
+            paginated_items = items_list[start:end]
 
             return {
                 "success": True,
                 "data": paginated_items,
-                "total": len(all_items),
+                "total": len(items_list),
                 "page": page,
                 "page_size": page_size,
-                "total_pages": (len(all_items) + page_size - 1) // page_size,
+                "total_pages": (len(items_list) + page_size - 1) // page_size if len(items_list) > 0 else 0,
                 "message": f"Retrieved {len(paginated_items)} financial indicators for {symbol}"
             }
         except DataSourceError as e:
@@ -276,7 +353,7 @@ class FinancialService:
             杜邦分析列表
         """
         try:
-            all_items = self.data_source.get_dupont_analysis(
+            all_items = self.aggregator.get_dupont_analysis(
                 symbol=symbol,
                 start_date=start_date,
                 end_date=end_date
@@ -331,7 +408,7 @@ class FinancialService:
             每股指标列表
         """
         try:
-            all_items = self.data_source.get_per_share_indicators(
+            all_items = self.aggregator.get_per_share_indicators(
                 symbol=symbol,
                 start_date=start_date,
                 end_date=end_date

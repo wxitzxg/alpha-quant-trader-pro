@@ -75,15 +75,15 @@ data_sources:
         timeout: 5
 
     # ====== 基本面数据源 ======
-    # Tushare: 免费 (120积分可用)
-    # AKShare: 免费
+    # AKShare: 免费 (stock_yjbb_em 业绩报表)
+    # Tushare: 需要更高积分权限
     fundamentals:
-      - name: "tushare"
+      - name: "akshare"
         priority: 10
         enabled: true
         timeout: 15
 
-      - name: "akshare"
+      - name: "tushare"
         priority: 20
         enabled: true
         timeout: 15

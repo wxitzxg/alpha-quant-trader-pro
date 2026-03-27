@@ -335,37 +335,83 @@ class AKShareAdapter(DataSourceAdapter):
         year: int,
         quarter: int
     ) -> Dict[str, float]:
-        """获取财务指标"""
-        try:
-            df = ak.stock_financial_analysis_indicator(symbol=symbol)
+        """
+        获取财务指标
 
-            if len(df) == 0:
+        使用 AKShare 的 stock_yjbb_em (业绩报表) 接口获取财务指标数据。
+        该接口返回沪深A股上市公司的业绩报告数据。
+
+        Args:
+            symbol: 股票代码 (如 "601611")
+            year: 年份
+            quarter: 季度 (1-4)
+
+        Returns:
+            财务指标字典 {"roe": 0.07, "gross_margin": 0.10, ...}
+        """
+        try:
+            # 根据季度计算报告期日期
+            quarter_dates = {
+                1: f"{year}0331",
+                2: f"{year}0630",
+                3: f"{year}0930",
+                4: f"{year}1231"
+            }
+            report_date = quarter_dates.get(quarter)
+            if not report_date:
+                logger.error(f"Invalid quarter: {quarter}")
                 return {}
 
-            # 获取最新的财务指标
-            row = df.iloc[0]
+            # 使用 stock_yjbb_em 业绩报表接口
+            df = ak.stock_yjbb_em(date=report_date)
 
+            if df.empty or len(df) == 0:
+                logger.warning(f"No financial data found for {symbol} on {report_date}")
+                return {}
+
+            # 查找对应股票
+            row = df[df['股票代码'] == symbol]
+            if row.empty:
+                logger.warning(f"Stock {symbol} not found in financial report for {report_date}")
+                return {}
+
+            row = row.iloc[0]
             indicators = {}
 
-            # ROE
-            roe = row.get('净资产收益率(%)')
+            # ROE (净资产收益率) - 单位已是百分比
+            roe = row.get('净资产收益率')
             if roe is not None and not pd.isna(roe):
                 indicators['roe'] = float(roe) / 100
 
-            # 毛利率
-            gross_margin = row.get('销售毛利率(%)')
+            # 毛利率 - 单位已是百分比
+            gross_margin = row.get('销售毛利率')
             if gross_margin is not None and not pd.isna(gross_margin):
                 indicators['gross_margin'] = float(gross_margin) / 100
 
-            # 净利率
-            net_profit_margin = row.get('销售净利率(%)')
-            if net_profit_margin is not None and not pd.isna(net_profit_margin):
-                indicators['net_profit_margin'] = float(net_profit_margin) / 100
+            # 每股收益
+            eps = row.get('每股收益')
+            if eps is not None and not pd.isna(eps):
+                indicators['eps'] = float(eps)
 
-            # 资产负债率
-            asset_liability_ratio = row.get('资产负债率(%)')
-            if asset_liability_ratio is not None and not pd.isna(asset_liability_ratio):
-                indicators['asset_liability_ratio'] = float(asset_liability_ratio) / 100
+            # 每股净资产
+            bvps = row.get('每股净资产')
+            if bvps is not None and not pd.isna(bvps):
+                indicators['bvps'] = float(bvps)
+
+            # 每股经营现金流量
+            ocfps = row.get('每股经营现金流量')
+            if ocfps is not None and not pd.isna(ocfps):
+                indicators['ocfps'] = float(ocfps)
+
+            # 净利润同比增长率 - 单位已是百分比
+            net_profit_growth = row.get('净利润-同比增长')
+            if net_profit_growth is not None and not pd.isna(net_profit_growth):
+                indicators['net_profit_growth'] = float(net_profit_growth) / 100
+
+            # 营业收入同比增长率 - 单位已是百分比
+            revenue_growth = row.get('营业总收入-同比增长')
+            if revenue_growth is not None and not pd.isna(revenue_growth):
+                indicators['revenue_growth'] = float(revenue_growth) / 100
 
             return indicators
 

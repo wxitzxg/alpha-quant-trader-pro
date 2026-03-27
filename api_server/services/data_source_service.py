@@ -104,9 +104,45 @@ class DataSourceService:
             
             if isinstance(klines, pd.DataFrame) and not klines.empty:
                 # 转换为字典列表
-                return klines.to_dict('records')
+                result = klines.to_dict('records')
             elif isinstance(klines, list):
-                return klines
+                # 处理 KLine 对象列表
+                result = []
+                for k in klines:
+                    if hasattr(k, 'model_dump'):
+                        # Pydantic v2 模型
+                        result.append(k.model_dump())
+                    elif hasattr(k, 'dict'):
+                        # Pydantic v1 模型
+                        result.append(k.dict())
+                    elif hasattr(k, 'close'):
+                        # 手动提取字段
+                        result.append({
+                            'symbol': k.symbol,
+                            'datetime': k.datetime,
+                            'open': getattr(k, 'open_price', k.open) if hasattr(k, 'open_price') else k.open,
+                            'high': k.high,
+                            'low': k.low,
+                            'close': k.close,
+                            'volume': k.volume,
+                            'amount': k.amount
+                        })
+                    else:
+                        # 已经是字典
+                        result.append(k)
+            else:
+                return []
+            
+            # 应用 limit 限制，返回最近的 N 条数据
+            # 注意: K线数据按日期降序排列 (最新的在前)
+            if limit and len(result) > limit:
+                result = result[:limit]
+            
+            # 将数据反转为升序 (最旧的在前，最新的在后)
+            # 这样更符合分析习惯，current_price = prices[-1]
+            result = list(reversed(result))
+            
+            return result
             
         except Exception as e:
             print(f"Error getting kline for {stock_code}: {e}")
