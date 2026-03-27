@@ -6,3 +6,7 @@ This package contains business services:
 - FilterService: Stock filtering logic
 - ScoreService: Scoring calculations
 """
+
+from stock_recommendation.services.recommendation_service import RecommendationService
+
+__all__ = ["RecommendationService"]
