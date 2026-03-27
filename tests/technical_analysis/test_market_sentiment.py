@@ -186,3 +186,59 @@ class TestMarketSentimentCalculator:
         assert calculator._score_volatility(4.0) == 5    # 3-5%
         assert calculator._score_volatility(2.5) == 2    # > 2%
         assert calculator._score_volatility(1.5) == -3   # <= 2%
+
+
+class TestKLineRepositoryExtension:
+    """测试 KLineRepository 扩展方法"""
+
+    def test_get_all_latest_klines_method_exists(self):
+        """测试 get_all_latest_klines 方法存在"""
+        from stock_market.repositories.stock_repository import KLineRepository
+
+        # 验证方法存在
+        assert hasattr(KLineRepository, 'get_all_latest_klines')
+
+    def test_get_all_latest_klines_with_mock_session(self):
+        """测试使用内存 SQLite 数据库的 get_all_latest_klines"""
+        from sqlalchemy import create_engine, text
+        from sqlalchemy.orm import sessionmaker
+        from common.database import Base
+        from stock_market.models import KLine, Stock
+        from datetime import date
+
+        # 创建内存数据库 (禁用 RETURNING 以兼容 SQLite)
+        engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(engine)
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        # 使用 raw SQL 插入测试数据以避免 RETURNING 兼容性问题
+        session.execute(text("""
+            INSERT INTO stocks (id, symbol, name, exchange, list_date, is_active)
+            VALUES
+                (1, '600000', '浦发银行', 'SH', '2020-01-01', 1),
+                (2, '600001', '邯郸钢铁', 'SH', '2020-01-01', 1)
+        """))
+
+        session.execute(text("""
+            INSERT INTO klines (id, stock_id, symbol, date, interval, open, high, low, close, volume, amount, sync_time)
+            VALUES
+                (1, 1, '600000', '2026-03-26', '1d', 10.0, 10.5, 9.8, 10.2, 1000000, 10200000.0, datetime('now')),
+                (2, 1, '600000', '2026-03-27', '1d', 10.2, 10.8, 10.0, 10.6, 1200000, 12720000.0, datetime('now')),
+                (3, 2, '600001', '2026-03-26', '1d', 5.0, 5.2, 4.9, 5.1, 500000, 2550000.0, datetime('now')),
+                (4, 2, '600001', '2026-03-27', '1d', 5.1, 5.3, 5.0, 5.2, 600000, 3120000.0, datetime('now'))
+        """))
+        session.commit()
+
+        from stock_market.repositories.stock_repository import KLineRepository
+        repo = KLineRepository(session)
+        result = repo.get_all_latest_klines(interval="1d")
+
+        # 验证返回结果 - 应该返回两只股票的最新 K 线
+        assert len(result) == 2
+        symbols = [k.symbol for k in result]
+        assert "600000" in symbols
+        assert "600001" in symbols
+        # 验证都是最新日期
+        for k in result:
+            assert k.date == date(2026, 3, 27)
