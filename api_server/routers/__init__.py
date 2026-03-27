@@ -17,6 +17,7 @@ from .zigzag import zigzag_router
 from .fundflow import fundflow_router
 from .news import news_router
 from .financial import financial_router
+from .market_sentiment import router as market_sentiment_router
 
 __all__ = [
     "health_router",
@@ -36,5 +37,6 @@ __all__ = [
     "zigzag_router",
     "fundflow_router",
     "news_router",
-    "financial_router"
+    "financial_router",
+    "market_sentiment_router"
 ]

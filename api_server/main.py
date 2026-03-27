@@ -33,7 +33,8 @@ from .routers import (
     zigzag_router,
     fundflow_router,
     news_router,
-    financial_router
+    financial_router,
+    market_sentiment_router
 )
 
 # 配置日志
@@ -136,6 +137,7 @@ app.include_router(zigzag_router, prefix="/api/v1", tags=["ZigZag"])
 app.include_router(fundflow_router, prefix="/api/v1", tags=["资金流向"])
 app.include_router(news_router, prefix="/api/v1", tags=["新闻资讯"])
 app.include_router(financial_router, prefix="/api/v1", tags=["财务数据"])
+app.include_router(market_sentiment_router, prefix="/api/v1", tags=["市场情绪"])
 
 
 # 健康检查
