@@ -8,7 +8,11 @@ This package contains recommendation engines:
 """
 
 from stock_recommendation.engines.base_selector import BaseSelector
+from stock_recommendation.engines.short_term_selector import ShortTermSelector
+from stock_recommendation.engines.long_term_selector import LongTermSelector
 
 __all__ = [
     "BaseSelector",
+    "ShortTermSelector",
+    "LongTermSelector",
 ]
