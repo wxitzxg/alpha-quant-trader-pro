@@ -7,4 +7,30 @@ This module provides stock recommendation functionality with:
 - Multi-factor filtering and scoring
 """
 
+from .models import (
+    StrategyType,
+    StockPoolType,
+    Rating,
+    ScanRequest,
+    ScanResult,
+    StockRecommendation,
+    AnalysisDetail,
+    DimensionScore,
+    RecommendationHistory,
+    BatchScanRequest,
+)
+
 __version__ = "0.1.0"
+
+__all__ = [
+    "StrategyType",
+    "StockPoolType",
+    "Rating",
+    "ScanRequest",
+    "ScanResult",
+    "StockRecommendation",
+    "AnalysisDetail",
+    "DimensionScore",
+    "RecommendationHistory",
+    "BatchScanRequest",
+]
