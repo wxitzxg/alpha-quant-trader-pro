@@ -242,3 +242,43 @@ class TestKLineRepositoryExtension:
         # 验证都是最新日期
         for k in result:
             assert k.date == date(2026, 3, 27)
+
+
+class TestMarketSentimentService:
+    """测试市场情绪服务"""
+
+    def test_service_with_mock_data(self):
+        """测试服务层使用 mock 数据"""
+        from unittest.mock import MagicMock, patch
+
+        # Mock dependencies
+        mock_session = MagicMock()
+        mock_stock_repo = MagicMock()
+        mock_stock_repo.get_active.return_value = []  # 无股票数据
+
+        with patch('technical_analysis.services.market_sentiment_service.StockRepository', return_value=mock_stock_repo):
+            from technical_analysis.services.market_sentiment_service import MarketSentimentService
+
+            service = MarketSentimentService(mock_session)
+            result = service.get_market_sentiment(use_realtime=False)
+
+            assert result.score == 50.0  # 无数据返回中性
+
+    def test_service_fallback_to_kline(self):
+        """测试实时数据失败时降级到 K 线"""
+        from unittest.mock import MagicMock, patch
+
+        mock_session = MagicMock()
+
+        # Mock StockRepository
+        mock_stock_repo = MagicMock()
+        mock_stock_repo.get_active.return_value = []
+
+        with patch('technical_analysis.services.market_sentiment_service.StockRepository', return_value=mock_stock_repo):
+            from technical_analysis.services.market_sentiment_service import MarketSentimentService
+
+            service = MarketSentimentService(mock_session)
+            result = service.get_market_sentiment(use_realtime=True)
+
+            # 无股票数据，返回中性评分
+            assert result.score == 50.0
