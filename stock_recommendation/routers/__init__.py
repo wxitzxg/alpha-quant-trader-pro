@@ -6,3 +6,7 @@ This package contains FastAPI routers:
 - Scan endpoints
 - Configuration endpoints
 """
+
+from .recommendation import recommendation_router
+
+__all__ = ["recommendation_router"]
