@@ -282,3 +282,74 @@ class TestMarketSentimentService:
 
             # 无股票数据，返回中性评分
             assert result.score == 50.0
+
+
+class TestMarketSentimentAPI:
+    """测试 API 端点"""
+
+    def test_api_endpoint_exists(self):
+        """测试 API 端点路由存在"""
+        from api_server.routers import market_sentiment_router
+
+        # 验证路由器存在
+        assert market_sentiment_router is not None
+
+        # 验证路由路径
+        routes = [route.path for route in market_sentiment_router.routes]
+        assert "/market/sentiment" in routes
+        assert "/market/sentiment/stats" in routes
+
+    def test_api_response_format(self):
+        """测试 API 响应格式"""
+        from fastapi.testclient import TestClient
+        from unittest.mock import patch, MagicMock
+        from sqlalchemy.orm import Session
+
+        # 创建测试应用
+        from fastapi import FastAPI
+        from api_server.routers.market_sentiment import router, get_db_session
+
+        app = FastAPI()
+
+        # Mock session
+        mock_session = MagicMock(spec=Session)
+
+        # Override dependency
+        def override_get_db_session():
+            yield mock_session
+
+        app.dependency_overrides[get_db_session] = override_get_db_session
+        app.include_router(router)
+
+        # Mock 服务层
+        with patch('api_server.routers.market_sentiment.MarketSentimentService') as MockService:
+            mock_instance = MagicMock()
+            mock_result = MagicMock()
+            mock_result.score = 50.0
+            mock_result.level = "中性"
+            mock_result.emoji = "😐"
+            mock_result.description = "暂无数据"
+            mock_result.data_source = "unknown"
+            mock_result.update_time = "2026-03-27 14:30:00"
+            mock_result.stats.total = 0
+            mock_result.stats.gainers = 0
+            mock_result.stats.losers = 0
+            mock_result.stats.neutral = 0
+            mock_result.stats.limit_up = 0
+            mock_result.stats.limit_down = 0
+            mock_result.stats.strong_stocks = 0
+            mock_result.stats.weak_stocks = 0
+            mock_result.stats.avg_change = 0.0
+            mock_result.stats.avg_turnover = 0.0
+            mock_result.stats.avg_volatility = 0.0
+            mock_instance.get_market_sentiment.return_value = mock_result
+            MockService.return_value = mock_instance
+
+            client = TestClient(app)
+            response = client.get("/market/sentiment?use_realtime=false")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "score" in data
+            assert "level" in data
+            assert "stats" in data
