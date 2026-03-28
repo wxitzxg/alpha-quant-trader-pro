@@ -21,6 +21,8 @@
 13. [财务数据](#财务数据)
 14. [资金流向](#资金流向)
 15. [新闻资讯](#新闻资讯)
+16. [市场情绪](#市场情绪)
+17. [股票推荐](#股票推荐)
 
 ---
 
@@ -1012,6 +1014,362 @@ GET 方式计算 ZigZag。
 - `query` (str): 搜索关键词
 - `page` (int): 页码
 - `page_size` (int): 每页数量
+
+---
+
+## 市场情绪
+
+### GET /market/sentiment
+
+获取市场情绪评分（7维度评分体系）。
+
+**参数**:
+- `use_realtime` (bool): 是否使用实时数据，默认 true
+- `exclude_gem` (bool): 排除创业板，默认 false
+- `exclude_star` (bool): 排除科创板，默认 false
+
+**响应示例**:
+```json
+{
+  "score": 57.0,
+  "level": "偏乐观",
+  "emoji": "🟢",
+  "description": "市场偏强，情绪稳定",
+  "stats": {
+    "total": 5000,
+    "gainers": 2460,
+    "losers": 2534,
+    "neutral": 6,
+    "limit_up": 15,
+    "limit_down": 3,
+    "strong_stocks": 500,
+    "weak_stocks": 400,
+    "avg_change": 0.52,
+    "avg_turnover": 3.5,
+    "avg_volatility": 2.1
+  },
+  "data_source": "realtime",
+  "update_time": "2026-03-27 14:30:00"
+}
+```
+
+### 7维度评分体系
+
+基准分 50 分，各维度加减分：
+
+| 维度 | 权重 | 评分逻辑 |
+|------|------|----------|
+| 涨跌家数比 | 20% | 涨股占比 >70%: +10, >60%: +7, >50%: +4, >40%: 0, >30%: -4, ≤30%: -10 |
+| 平均涨幅 | 20% | 均涨 >3%: +10, >1.5%: +7, >0.5%: +4, >-0.5%: 0, >-1.5%: -4, >-3%: -7, ≤-3%: -10 |
+| 涨跌停比 | 15% | (涨停数-跌停数) ≥10: +8, ≥5: +5, ≥1: +2, ≥-1: 0, ≥-5: -2, ≥-10: -5, <-10: -8 |
+| 强势股占比 | 15% | 涨幅>5%占比 >30%: +8, >20%: +5, >10%: +2; 跌幅>5%占比高则扣分 |
+| 成交活跃度 | 10% | 均换手 >5%: +5, >3%: +3, >2%: +1, >1%: 0, ≤1%: -5 |
+| 波动率 | 10% | 均振幅 3-5%: +5, >5%: +2, >8%: -3, ≤2%: -3 |
+| 趋势强度 | 10% | 暂不实现，固定为 0 |
+
+### 情绪等级对照表
+
+| 分数范围 | 等级 | Emoji | 描述 |
+|----------|------|-------|------|
+| ≥80 | 极度乐观 | 🔥 | 市场情绪极度亢奋，注意追高风险 |
+| 65-79 | 乐观 | 📈 | 市场情绪积极，趋势向上 |
+| 55-64 | 偏乐观 | 🟢 | 市场偏强，情绪稳定 |
+| 45-54 | 中性 | 😐 | 市场平稳，多空平衡 |
+| 35-44 | 偏悲观 | 🔻 | 市场偏弱，观望为主 |
+| 20-34 | 悲观 | 📉 | 市场情绪低迷，谨慎操作 |
+| <20 | 极度悲观 | ❄️ | 市场情绪极度低迷，恐慌情绪蔓延 |
+
+### GET /market/sentiment/stats
+
+获取市场详细统计数据。
+
+**参数**:
+- `use_realtime` (bool): 是否使用实时数据，默认 true
+
+**响应示例**:
+```json
+{
+  "stats": {
+    "total": 5000,
+    "gainers": 2460,
+    "losers": 2534,
+    "neutral": 6,
+    "limit_up": 15,
+    "limit_down": 3,
+    "strong_stocks": 500,
+    "weak_stocks": 400,
+    "avg_change": 0.52,
+    "avg_turnover": 3.5,
+    "avg_volatility": 2.1
+  },
+  "data_source": "realtime",
+  "update_time": "2026-03-27 14:30:00"
+}
+```
+
+---
+
+## 股票推荐
+
+### POST /recommendation/scan
+
+扫描推荐股票（全市场或自选池）。
+
+**请求体**:
+```json
+{
+  "strategy_type": "short",
+  "top_n": 10,
+  "stock_pool": "all",
+  "custom_codes": ["000001"],
+  "exclude_gem": true,
+  "exclude_star": true,
+  "min_score": 60
+}
+```
+
+**参数说明**:
+- `strategy_type` (str): 策略类型 - short | long | both
+- `top_n` (int): 返回前N只股票，范围 1-100
+- `stock_pool` (str): 股票池类型 - all | watchlist | custom
+- `custom_codes` (list): 自定义股票池（可选）
+- `exclude_gem` (bool): 排除创业板（3开头）
+- `exclude_star` (bool): 排除科创板（688开头）
+- `min_score` (int): 最低评分过滤，范围 0-100
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "strategy_type": "short",
+    "scan_time": "2026-03-27 23:00:00",
+    "total_analyzed": 3500,
+    "recommendations": [
+      {
+        "code": "000001",
+        "name": "平安银行",
+        "price": 12.50,
+        "change_pct": 2.35,
+        "score": 85.0,
+        "rating": "A+",
+        "buy_signals": ["RSI超卖(25)", "KDJ金叉", "MACD金叉"],
+        "sell_signals": [],
+        "stop_loss": 11.88,
+        "take_profit": 13.75,
+        "stop_loss_pct": -4.96,
+        "take_profit_pct": 10.0,
+        "risk_reward_ratio": 2.5,
+        "recommend": true
+      }
+    ]
+  }
+}
+```
+
+### GET /recommendation/analyze/{stock_code}
+
+分析单只股票，返回详细评分和信号。
+
+**参数**:
+- `stock_code` (str): 股票代码（路径参数）
+- `strategy_type` (str): 策略类型 - short | long | both，默认 both
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "code": "000001",
+    "name": "平安银行",
+    "price": 12.50,
+    "score": 85.0,
+    "rating": "A+",
+    "recommend": true,
+    "details": {
+      "rsi": {"score": 20, "value": 25, "signal": "RSI超卖"},
+      "kdj": {"score": 20, "k": 30, "d": 25, "j": 40, "golden_cross": true},
+      "macd": {"score": 15, "dif": 0.15, "dea": 0.10, "golden_cross": true},
+      "bollinger": {"score": 15, "position_pct": 15, "signal": "下轨反弹"},
+      "volume": {"score": 15, "volume_ratio": 2.1, "surge_type": "放量上涨"},
+      "fund_flow": {"score": 15, "main_in": 850.5}
+    },
+    "buy_signals": ["RSI超卖(25)", "KDJ金叉", "MACD金叉"],
+    "sell_signals": [],
+    "stop_loss": 11.88,
+    "take_profit": 13.75,
+    "risk_reward_ratio": 2.5
+  }
+}
+```
+
+### GET /recommendation/strategies
+
+获取可用策略列表。
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "strategies": [
+      {
+        "name": "short",
+        "display_name": "Short-term Strategy",
+        "description": "Technical analysis based strategy for short-term trading",
+        "scoring_weights": {"rsi": 20, "kdj": 20, "macd": 15, "bollinger": 15, "volume": 15, "fund_flow": 15},
+        "score_threshold": 60,
+        "min_buy_signals": 2,
+        "max_hold_days": 10,
+        "indicators": ["RSI", "KDJ", "MACD", "Bollinger", "Volume", "Fund Flow"]
+      },
+      {
+        "name": "long",
+        "display_name": "Long-term Strategy",
+        "description": "Combined fundamental and technical analysis for long-term investment",
+        "scoring_weights": {"trend": 30, "fundamentals": 30, "valuation": 15, "momentum": 15, "volume_energy": 15, "dmi": 15, "fund_flow": 10},
+        "score_threshold": 65,
+        "min_hold_days": 20,
+        "max_hold_days": 120,
+        "indicators": ["Trend", "Fundamentals", "Valuation", "Momentum", "Volume Energy", "DMI", "Fund Flow"]
+      }
+    ],
+    "rating_levels": {
+      "A+": "Strong Buy (>=85)",
+      "A": "Buy (70-84)",
+      "B+": "Actionable (60-69)",
+      "B": "Watch (50-59)",
+      "C": "Hold (40-49)",
+      "D": "Not Recommended (<40)"
+    }
+  }
+}
+```
+
+### GET /recommendation/config
+
+获取当前推荐配置参数。
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "short_term": {
+      "weights": {"rsi": 20, "kdj": 20, "macd": 15, "bollinger": 15, "volume": 15, "fund_flow": 15},
+      "score_threshold": 60,
+      "min_buy_signals": 2,
+      "atr_stop_multiplier": 2.0,
+      "atr_profit_multiplier": 3.0,
+      "max_hold_days": 10,
+      "filters": {
+        "exclude_gem": true,
+        "exclude_star": true,
+        "exclude_bse": true,
+        "min_price": 2.0,
+        "min_volume": 1000000
+      }
+    },
+    "long_term": {
+      "weights": {"trend": 30, "fundamentals": 30, "valuation": 15, "momentum": 15, "volume_energy": 15, "dmi": 15, "fund_flow": 10},
+      "score_threshold": 65,
+      "min_roe": 10,
+      "min_profit_growth": 10,
+      "atr_stop_multiplier": 2.5,
+      "atr_profit_multiplier": 4.0,
+      "min_hold_days": 20,
+      "max_hold_days": 120
+    },
+    "rating_thresholds": {
+      "a_plus": 85,
+      "a": 70,
+      "b_plus": 60,
+      "b": 50,
+      "c": 40
+    }
+  }
+}
+```
+
+### PUT /recommendation/config
+
+更新推荐配置（当前实现为预览模式，不持久化）。
+
+**请求体**:
+```json
+{
+  "short_term_weights": {"rsi": 20, "kdj": 20, "macd": 15, "bollinger": 15, "volume": 15, "fund_flow": 15},
+  "long_term_weights": {"trend": 30, "fundamentals": 30, "valuation": 15, "momentum": 15, "volume_energy": 15, "dmi": 15, "fund_flow": 10},
+  "score_threshold": {"short": 60, "long": 65}
+}
+```
+
+### POST /recommendation/batch-scan
+
+批量多策略扫描。
+
+**请求体**:
+```json
+{
+  "strategies": ["short", "long"],
+  "top_n_per_strategy": 5,
+  "stock_pool": "all",
+  "custom_codes": null,
+  "min_score": 60
+}
+```
+
+**响应示例**:
+```json
+{
+  "success": true,
+  "data": {
+    "batch_results": {
+      "short": { /* ScanResult */ },
+      "long": { /* ScanResult */ }
+    },
+    "strategies_run": ["short", "long"]
+  }
+}
+```
+
+### 短线评分体系（满分100分）
+
+| 维度 | 分值 | 指标说明 |
+|------|------|----------|
+| RSI信号 | 20分 | 超卖(<30)得满分，超买(>70)扣分 |
+| KDJ信号 | 20分 | 金叉+J<50得满分，死叉扣分 |
+| MACD信号 | 15分 | 金叉/翻红得满分 |
+| 布林带信号 | 15分 | 下轨反弹得满分 |
+| 量价异动 | 15分 | 放量上涨得满分 |
+| 资金流向 | 15分 | 主力流入>500万得满分 |
+
+**推荐条件**：评分>=60 且 买入信号>=2个
+
+### 中长线评分体系（满分130分，归一化到100分）
+
+| 维度 | 分值 | 指标说明 |
+|------|------|----------|
+| 趋势评分 | 30分 | MA趋势+ADX强度 |
+| 基本面评分 | 30分 | ROE+利润增长+股息率 |
+| 估值评分 | 15分 | PEG估值 |
+| 动量评分 | 15分 | 20日涨幅 |
+| 量能评分 | 15分 | OBV趋势+量比 |
+| DMI评分 | 15分 | 多头趋势确认 |
+| 资金流评分 | 10分 | 主力净流入 |
+
+**推荐条件**：评分>=65
+
+### 评级标准
+
+| 评分 | 评级 | 含义 |
+|------|------|------|
+| >=85 | A+ | 强烈推荐 |
+| 70-84 | A | 推荐 |
+| 60-69 | B+ | 可操作 |
+| 50-59 | B | 关注 |
+| 40-49 | C | 观望 |
+| <40 | D | 不推荐 |
 
 ---
 
