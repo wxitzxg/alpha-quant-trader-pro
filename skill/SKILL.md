@@ -1,6 +1,6 @@
 ---
-name: alpha-quant-trader-pro
-description: Alpha Quant Trader Pro API integration for stock analysis, portfolio management, and trading simulation. Use when the user asks about stock technical analysis (VCP, TD Sequential, Divergence, MACD, RSI), portfolio management (positions, transactions, cash balance, favorites), trading simulation (buy/sell, account management), backtesting strategies, risk management (VaR, stop-loss, volatility), performance statistics, market data sync, market sentiment (7-dimension scoring), or stock recommendation (short-term/long-term strategies). Triggers on phrases like "股票分析", "持仓管理", "回测", "技术指标", "模拟交易", "风险控制", "资金流向", "财务数据", "市场情绪", "情绪评分", "股票推荐", "选股", "短线策略", "中长线策略", "查行情", "股价多少", "K线图", "分析一下这股票", "看看指标", "我买了什么", "持仓情况", "账户余额", "模拟买入", "模拟卖出", "风险大不大", "止损位", "回测一下", "财务状况", "业绩怎么样", "主力资金", "龙虎榜", "今天大盘怎么样", "市场行情", "帮我选股", "推荐几只股票", "有什么好票".
+name: 量化交易系统
+description: Alpha Quant Trader Pro 量化交易系统 API，提供股票数据、技术分析、持仓管理、模拟交易、回测等功能。当用户询问技术分析（VCP、九转序列、背离、MACD、RSI）、持仓管理（仓位、交易记录、现金余额、收藏）、模拟交易（买卖、账户管理）、回测策略、风险控制（VaR、止损、波动率）、收益统计、市场数据同步、市场情绪（7维度评分）、股票推荐（短线/中长线策略）时触发。触发词包括：股票分析、持仓管理、回测、技术指标、模拟交易、风险控制、资金流向、财务数据、市场情绪、情绪评分、股票推荐、选股、短线策略、中长线策略、查行情、股价多少、K线图、分析一下这股票、看看指标、我买了什么、持仓情况、账户余额、模拟买入、模拟卖出、风险大不大、止损位、回测一下、财务状况、业绩怎么样、主力资金、龙虎榜、今天大盘怎么样、市场行情、帮我选股、推荐几只股票、有什么好票。
 ---
 
 # Alpha Quant Trader Pro
