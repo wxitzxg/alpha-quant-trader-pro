@@ -142,6 +142,48 @@ class KLineRepository(BaseRepository[KLine]):
         result = self.session.execute(stmt).scalars().all()
         return list(reversed(list(result)))  # 按时间正序返回
 
+    def get_all_latest_klines(
+        self,
+        interval: str = "1d",
+        limit: int = 5000
+    ) -> List[KLine]:
+        """
+        获取所有股票的最新 K 线数据
+
+        使用子查询获取每只股票的最新日期，然后关联获取完整 K 线
+
+        Args:
+            interval: K 线周期
+            limit: 最大返回数量
+
+        Returns:
+            每只股票最新一天 K 线数据的列表
+        """
+        from sqlalchemy import func, and_
+
+        # 子查询：获取每只股票的最新日期
+        subquery = self.session.query(
+            KLine.symbol,
+            func.max(KLine.date).label('max_date')
+        ).filter(
+            KLine.interval == interval
+        ).group_by(
+            KLine.symbol
+        ).subquery()
+
+        # 主查询：关联获取完整 K 线数据
+        stmt = select(KLine).join(
+            subquery,
+            and_(
+                KLine.symbol == subquery.c.symbol,
+                KLine.date == subquery.c.max_date,
+                KLine.interval == interval
+            )
+        ).limit(limit)
+
+        result = self.session.execute(stmt).scalars().all()
+        return list(result)
+
     def bulk_insert(self, klines: List[KLine]) -> int:
         """
         批量插入K线数据
