@@ -1,0 +1,31 @@
+# config/recommendation.yaml
+recommendation:
+  # 过滤规则
+  filter:
+    exclude_gem: true          # 排除创业板(3开头)
+    exclude_star: true         # 排除科创板(688开头)
+    min_price: 2.0             # 最低股价
+    min_volume: 1000000        # 最低成交量
+
+  # 短线策略参数
+  short_term:
+    score_threshold: 60        # 推荐阈值
+    min_buy_signals: 2         # 最少买入信号数
+    atr_stop_multiplier: 2.0   # ATR止损倍数
+    atr_profit_multiplier: 3.0 # ATR止盈倍数
+    rsi_oversold: 30           # RSI超卖阈值
+    rsi_overbought: 70         # RSI超买阈值
+
+  # 中长线策略参数
+  long_term:
+    score_threshold: 65        # 推荐阈值
+    atr_stop_multiplier: 2.5
+    atr_profit_multiplier: 4.0
+    min_roe: 10                # 最低ROE(%)
+    min_profit_growth: 10      # 最低利润增长率(%)
+
+  # 扫描配置
+  scan:
+    default_top_n: 10          # 默认返回数量
+    max_workers: 10            # 并行分析线程数
+    cache_ttl: 300             # 缓存有效期(秒)
