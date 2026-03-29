@@ -14,17 +14,20 @@ from common.database import DatabaseManager
 from portfolio_manager.repositories import (
     PositionRepository,
     TransactionRepository,
-    CashBalanceRepository
+    CashBalanceRepository,
+    CapitalAdjustmentRepository
 )
 from portfolio_manager.position_service import PositionService
 from portfolio_manager.transaction_service import TransactionService
 from portfolio_manager.account_service import AccountService
+from portfolio_manager.capital_service import CapitalService
 from portfolio_manager.fee_calculator import FeeCalculator
 from portfolio_manager.models import (
     PositionModel,
     TransactionModel,
     AccountSummary
 )
+from portfolio_manager.schemas.capital_schemas import CapitalAdjustRequest
 
 
 class PortfolioService:
@@ -48,10 +51,12 @@ class PortfolioService:
             position_repo = PositionRepository(session)
             transaction_repo = TransactionRepository(session)
             cash_repo = CashBalanceRepository(session)
+            capital_repo = CapitalAdjustmentRepository(session)
 
             # 初始化 services
             position_service = PositionService(position_repo)
-            account_service = AccountService(cash_repo, position_service)
+            capital_service = CapitalService(session, capital_repo, cash_repo)
+            account_service = AccountService(cash_repo, position_service, capital_service)
             fee_calculator = FeeCalculator()
             transaction_service = TransactionService(
                 transaction_repo=transaction_repo,
@@ -66,7 +71,8 @@ class PortfolioService:
                 position_service,
                 transaction_service,
                 account_service,
-                fee_calculator
+                fee_calculator,
+                capital_service
             )
 
     def get_account_summary(self) -> Dict:
@@ -77,7 +83,7 @@ class PortfolioService:
             账户汇总响应
         """
         try:
-            with self._get_services() as (_, _, _, account_service, _):
+            with self._get_services() as (_, _, _, account_service, _, _):
                 summary = account_service.get_account_summary()
 
                 return {
@@ -86,6 +92,8 @@ class PortfolioService:
                         "total_market_value": summary.total_market_value,
                         "stock_market_value": summary.stock_market_value,
                         "cash": summary.cash,
+                        "initial_capital": summary.initial_capital,
+                        "total_pl": summary.total_pl,
                         "total_floating_pl": summary.total_floating_pl,
                         "total_realized_pl": summary.total_realized_pl,
                         "positions_count": summary.positions_count
@@ -110,7 +118,7 @@ class PortfolioService:
             持仓信息
         """
         try:
-            with self._get_services() as (_, position_service, _, _, _):
+            with self._get_services() as (_, position_service, _, _, _, _):
                 position = position_service.get_position(symbol)
 
                 if not position:
@@ -361,7 +369,7 @@ class PortfolioService:
             交易记录
         """
         try:
-            with self._get_services() as (_, _, transaction_service, _, _):
+            with self._get_services() as (_, _, transaction_service, _, _, _):
                 # 转换日期格式
                 date_obj = None
                 if transaction_date:
@@ -414,7 +422,7 @@ class PortfolioService:
             交易记录
         """
         try:
-            with self._get_services() as (_, _, transaction_service, _, _):
+            with self._get_services() as (_, _, transaction_service, _, _, _):
                 # 转换日期格式
                 date_obj = None
                 if transaction_date:
@@ -469,7 +477,7 @@ class PortfolioService:
             交易历史列表
         """
         try:
-            with self._get_services() as (_, _, transaction_service, _, _):
+            with self._get_services() as (_, _, transaction_service, _, _, _):
                 # 转换日期格式
                 start_date_obj = None
                 end_date_obj = None
@@ -524,7 +532,7 @@ class PortfolioService:
             现金余额
         """
         try:
-            with self._get_services() as (_, _, _, account_service, _):
+            with self._get_services() as (_, _, _, account_service, _, _):
                 cash = account_service.get_cash_balance()
 
                 return {
@@ -552,7 +560,7 @@ class PortfolioService:
             操作结果
         """
         try:
-            with self._get_services() as (_, _, _, account_service, _):
+            with self._get_services() as (_, _, _, account_service, _, _):
                 account_service.set_cash_balance(amount)
 
                 return {
@@ -567,4 +575,82 @@ class PortfolioService:
                 "success": False,
                 "error": str(e),
                 "message": f"Failed to set cash balance: {str(e)}"
+            }
+
+    def adjust_capital(self, request: CapitalAdjustRequest) -> Dict:
+        """
+        调整初始资金
+
+        Args:
+            request: 资金调整请求
+
+        Returns:
+            调整结果
+        """
+        try:
+            with self._get_services() as (_, _, _, _, _, capital_service):
+                response, confirmation = capital_service.adjust_capital(request)
+
+                # 如果需要确认
+                if confirmation:
+                    return {
+                        "success": False,
+                        "data": confirmation,
+                        "message": confirmation.get("message", "Confirmation required")
+                    }
+
+                return {
+                    "success": True,
+                    "data": {
+                        "adjustment_id": response.adjustment_id,
+                        "new_initial_capital": response.new_initial_capital,
+                        "adjustment_type": response.adjustment_type.value,
+                        "amount": response.amount,
+                        "new_cash_balance": response.new_cash_balance
+                    },
+                    "message": "Capital adjusted successfully"
+                }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to adjust capital: {str(e)}"
+            }
+
+    def get_capital_history(self, limit: int = 20) -> Dict:
+        """
+        获取资金调整历史
+
+        Args:
+            limit: 限制返回数量
+
+        Returns:
+            调整历史
+        """
+        try:
+            with self._get_services() as (_, _, _, _, _, capital_service):
+                history = capital_service.get_adjustment_history(limit)
+
+                return {
+                    "success": True,
+                    "data": {
+                        "items": [
+                            {
+                                "id": item.id,
+                                "amount": item.amount,
+                                "adjustment_type": item.adjustment_type.value,
+                                "reason": item.reason,
+                                "created_at": item.created_at.isoformat()
+                            }
+                            for item in history.items
+                        ],
+                        "total": history.total
+                    },
+                    "message": "Capital adjustment history retrieved successfully"
+                }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "message": f"Failed to get capital history: {str(e)}"
             }

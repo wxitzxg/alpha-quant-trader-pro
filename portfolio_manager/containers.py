@@ -4,8 +4,20 @@
 
 from dependency_injector import containers, providers
 from data_sources import DataSourceAggregator
-from portfolio_manager.repositories import PositionRepository, TransactionRepository, CashBalanceRepository, FavoriteRepository
-from portfolio_manager.services import PositionService, TransactionService, AccountService, FavoriteService
+from portfolio_manager.repositories import (
+    PositionRepository,
+    TransactionRepository,
+    CashBalanceRepository,
+    FavoriteRepository,
+    CapitalAdjustmentRepository
+)
+from portfolio_manager.services import (
+    PositionService,
+    TransactionService,
+    AccountService,
+    FavoriteService,
+    CapitalService
+)
 from portfolio_manager.fee_calculator import FeeCalculator
 from common.config import get_config
 
@@ -61,6 +73,11 @@ class PortfolioManagerContainer(containers.DeclarativeContainer):
         session=db_session
     )
 
+    capital_adjustment_repository = providers.Factory(
+        CapitalAdjustmentRepository,
+        session=db_session
+    )
+
     # ========== 服务层 ==========
 
     position_service = providers.Factory(
@@ -69,10 +86,18 @@ class PortfolioManagerContainer(containers.DeclarativeContainer):
         data_source_aggregator=data_source_aggregator
     )
 
+    capital_service = providers.Factory(
+        CapitalService,
+        session=db_session,
+        capital_repo=capital_adjustment_repository,
+        cash_repo=cash_balance_repository
+    )
+
     account_service = providers.Factory(
         AccountService,
         cash_repo=cash_balance_repository,
-        position_service=position_service
+        position_service=position_service,
+        capital_service=capital_service
     )
 
     transaction_service = providers.Factory(
@@ -97,5 +122,6 @@ class PortfolioManagerContainer(containers.DeclarativeContainer):
             'position_service': self.position_service(),
             'transaction_service': self.transaction_service(),
             'account_service': self.account_service(),
-            'favorite_service': self.favorite_service()
+            'favorite_service': self.favorite_service(),
+            'capital_service': self.capital_service()
         }
