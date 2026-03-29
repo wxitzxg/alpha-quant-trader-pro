@@ -204,15 +204,18 @@ class AccountSummary(BaseModel):
 
 **API 响应模型（`api_server/models/portfolio.py`）：**
 
+> **向后兼容：** 保留现有字段（`total_assets`、`total_profit_rate`、`today_profit`），新增 `initial_capital`、`total_pl`、`stock_market_value` 字段。
+
 ```python
 class AccountSummary(BaseModel):
     """账户汇总"""
     total_market_value: float = Field(..., description="总市值")
     total_cash: float = Field(..., description="总现金")
-    stock_market_value: float = Field(0.0, description="股票市值")
-    initial_capital: float = Field(0.0, description="初始资金")  # 新增
-    total_pl: float = Field(0.0, description="总盈亏")          # 新增
-    total_profit: float = Field(..., description="总盈亏（兼容旧字段）")
+    total_assets: float = Field(..., description="总资产（= total_market_value，兼容旧字段）")
+    stock_market_value: float = Field(0.0, description="股票市值")      # 新增
+    initial_capital: float = Field(0.0, description="初始资金")          # 新增
+    total_pl: float = Field(0.0, description="总盈亏")                  # 新增
+    total_profit: float = Field(..., description="总盈亏（= total_pl，兼容旧字段）")
     total_profit_rate: float = Field(..., description="总盈亏率")
     position_count: int = Field(..., description="持仓股票数")
     today_profit: float = Field(..., description="今日盈亏")
@@ -230,6 +233,31 @@ class AccountSummary(BaseModel):
   "total_realized_pl": 380.18,
   "positions_count": 5
 }
+```
+
+#### portfolio_service.py 返回结构更新
+
+修改 `api_server/services/portfolio_service.py` 的 `get_account_summary()` 方法：
+
+```python
+def get_account_summary(self) -> Dict:
+    with self._get_services() as (_, _, _, account_service, _):
+        summary = account_service.get_account_summary()
+
+        return {
+            "success": True,
+            "data": {
+                "total_market_value": summary.total_market_value,
+                "stock_market_value": summary.stock_market_value,
+                "cash": summary.cash,
+                "initial_capital": summary.initial_capital,      # 新增
+                "total_pl": summary.total_pl,                    # 新增
+                "total_floating_pl": summary.total_floating_pl,
+                "total_realized_pl": summary.total_realized_pl,
+                "positions_count": summary.positions_count
+            },
+            "message": "Account summary retrieved successfully"
+        }
 ```
 
 ### 4. 服务层变更
@@ -281,17 +309,23 @@ class CapitalService:
 ```python
 # scripts/migrate_capital.py
 
-def migrate():
+def migrate(initial_capital: float = 0):
     """
     数据迁移脚本
 
+    参数：
+        initial_capital: 初始资金（默认 0，建议用户手动设置）
+
     步骤：
-    1. 为 cash_balance 表添加 initial_capital 字段
+    1. 为 cash_balance 表添加 initial_capital 字段（默认 0）
     2. 创建 capital_adjustments 表
-    3. 根据现有数据计算 initial_capital：
-       - initial_capital = 当前现金 + 股票市值 - 已实现盈亏
-       - 或直接让用户手动设置
-    4. 创建初始 capital_adjustment 记录
+    3. 如果 initial_capital > 0：
+       - 创建初始 capital_adjustment 记录
+       - 更新 cash_balance.initial_capital
+
+    注意：
+    由于历史数据无法追溯准确的初始资金，迁移时默认设为 0。
+    用户应通过 /api/portfolio/account/capital/adjust 接口录入初始资金。
     """
     pass
 
@@ -306,7 +340,7 @@ def rollback():
 
 **迁移验证：**
 - 验证表结构正确
-- 验证初始数据一致性：`initial_capital = SUM(adjustments)`
+- 验证初始数据一致性：`initial_capital = SUM(adjustments)` 或 0
 - 验证账户汇总计算正确
 
 ### 6. 安全性设计
@@ -342,14 +376,27 @@ async def adjust_capital(
 - `operator_id` - 操作人 ID
 - `ip_address` - 操作 IP
 
-#### 大额操作限制
+#### 大额操作二次确认
 
 ```python
 LARGE_AMOUNT_THRESHOLD = 100000  # 10万以上需要二次确认
 
-if amount >= LARGE_AMOUNT_THRESHOLD:
-    # 返回需要确认的响应
-    return {"require_confirmation": True, "message": "大额操作需确认"}
+# 请求 Schema 增加确认参数
+class CapitalAdjustRequest(BaseModel):
+    amount: float = Field(..., gt=0, description="调整金额（必须大于0）")
+    adjustment_type: AdjustmentType = Field(..., description="调整类型")
+    reason: Optional[str] = Field(None, max_length=200, description="调整原因")
+    confirm: bool = Field(False, description="大额操作确认标志")
+
+# 业务逻辑
+def adjust_capital(request: CapitalAdjustRequest):
+    if request.amount >= LARGE_AMOUNT_THRESHOLD and not request.confirm:
+        return {
+            "require_confirmation": True,
+            "message": f"金额超过 {LARGE_AMOUNT_THRESHOLD}，请确认后重试",
+            "hint": "设置 confirm=true 进行确认"
+        }
+    # 正常处理...
 ```
 
 ### 7. 测试设计
