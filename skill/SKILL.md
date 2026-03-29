@@ -1,6 +1,6 @@
 ---
 name: 量化交易系统
-description: Alpha Quant Trader Pro 量化交易系统 API，提供股票数据、技术分析、持仓管理、模拟交易、回测等功能。当用户询问技术分析（VCP、九转序列、背离、MACD、RSI）、持仓管理（仓位、交易记录、现金余额、收藏）、模拟交易（买卖、账户管理）、回测策略、风险控制（VaR、止损、波动率）、收益统计、市场数据同步、市场情绪（7维度评分）、股票推荐（短线/中长线策略）时触发。触发词包括：股票分析、持仓管理、回测、技术指标、模拟交易、风险控制、资金流向、财务数据、市场情绪、情绪评分、股票推荐、选股、短线策略、中长线策略、查行情、股价多少、K线图、分析一下这股票、看看指标、我买了什么、持仓情况、账户余额、模拟买入、模拟卖出、风险大不大、止损位、回测一下、财务状况、业绩怎么样、主力资金、龙虎榜、今天大盘怎么样、市场行情、帮我选股、推荐几只股票、有什么好票。
+description: Alpha Quant Trader Pro 量化交易系统 API，提供股票数据、技术分析、持仓管理、模拟交易、回测等功能。当用户询问技术分析（VCP、九转序列、背离、MACD、RSI）、持仓管理（仓位、交易记录、现金余额、收藏）、资金调整（转入、转出、初始资金）、模拟交易（买卖、账户管理）、回测策略、风险控制（VaR、止损、波动率）、收益统计、市场数据同步、市场情绪（7维度评分）、股票推荐（短线/中长线策略）时触发。触发词包括：股票分析、持仓管理、回测、技术指标、模拟交易、风险控制、资金流向、财务数据、市场情绪、情绪评分、股票推荐、选股、短线策略、中长线策略、查行情、股价多少、K线图、分析一下这股票、看看指标、我买了什么、持仓情况、账户余额、模拟买入、模拟卖出、风险大不大、止损位、回测一下、财务状况、业绩怎么样、主力资金、龙虎榜、今天大盘怎么样、市场行情、帮我选股、推荐几只股票、有什么好票、转入资金、转出资金、初始资金、追加投资、资金调整。
 ---
 
 # Alpha Quant Trader Pro
@@ -81,6 +81,8 @@ curl -X POST http://localhost:8000/api/v1/analysis/five-dimension \
 | `GET /portfolio/account/summary` | 账户汇总 |
 | `GET /portfolio/account/cash` | 现金余额 |
 | `POST /portfolio/account/cash/add` | 充值 |
+| `POST /portfolio/account/capital/adjust` | 调整初始资金（转入/转出） |
+| `GET /portfolio/account/capital/history` | 资金调整历史 |
 | `GET /portfolio/positions` | 持仓列表 |
 | `GET /portfolio/positions/{stock_code}` | 单股持仓信息 |
 | `POST /portfolio/positions/sync` | 同步持仓 |
@@ -232,6 +234,30 @@ curl http://localhost:8000/api/v1/portfolio/positions/600519
 curl -X POST http://localhost:8000/api/v1/portfolio/trade/sell \
   -H "Content-Type: application/json" \
   -d '{"stock_code": "600519", "quantity": 100, "price": 1700.0}'
+```
+
+### 资金调整流程
+```bash
+# 1. 转入资金（增加初始资金和现金）
+curl -X POST http://localhost:8000/api/v1/portfolio/account/capital/adjust \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 50000, "adjustment_type": "deposit", "reason": "追加投资"}'
+
+# 2. 转出资金（减少初始资金和现金）
+curl -X POST http://localhost:8000/api/v1/portfolio/account/capital/adjust \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 10000, "adjustment_type": "withdraw", "reason": "部分赎回"}'
+
+# 3. 大额转出需要确认（>= 10万）
+curl -X POST http://localhost:8000/api/v1/portfolio/account/capital/adjust \
+  -H "Content-Type: application/json" \
+  -d '{"amount": 150000, "adjustment_type": "withdraw", "reason": "大额赎回", "confirm": true}'
+
+# 4. 查看资金调整历史
+curl "http://localhost:8000/api/v1/portfolio/account/capital/history?limit=20"
+
+# 5. 查看账户汇总
+curl http://localhost:8000/api/v1/portfolio/account/summary
 ```
 
 ### 收藏管理流程
