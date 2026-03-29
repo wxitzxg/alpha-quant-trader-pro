@@ -20,6 +20,13 @@ from .favorite_schemas import (
     UpdateFavoriteRequest,
     FavoriteResponse
 )
+from .capital_schemas import (
+    AdjustmentType,
+    CapitalAdjustRequest,
+    CapitalAdjustResponse,
+    CapitalAdjustmentItem,
+    CapitalAdjustmentHistory
+)
 
 __all__ = [
     'PositionCreateSchema',
@@ -33,5 +40,10 @@ __all__ = [
     'AddFavoriteRequest',
     'RemoveFavoriteRequest',
     'UpdateFavoriteRequest',
-    'FavoriteResponse'
+    'FavoriteResponse',
+    'AdjustmentType',
+    'CapitalAdjustRequest',
+    'CapitalAdjustResponse',
+    'CapitalAdjustmentItem',
+    'CapitalAdjustmentHistory'
 ]

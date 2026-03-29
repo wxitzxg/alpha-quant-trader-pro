@@ -21,6 +21,9 @@ from portfolio_manager.schemas.favorite_schemas import (
     UpdateFavoriteRequest,
     FavoriteResponse
 )
+from portfolio_manager.schemas.capital_schemas import (
+    CapitalAdjustRequest
+)
 from portfolio_manager.services.favorite_service import FavoriteService
 from common.exceptions import BusinessError, NotFoundError
 
@@ -173,6 +176,62 @@ async def get_cash_balance():
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting cash balance: {str(e)}")
+
+
+# ==================== 资金调整管理 ====================
+
+
+@portfolio_router.post("/portfolio/account/capital/adjust", response_model=APIResponse)
+async def adjust_capital(request: CapitalAdjustRequest):
+    """
+    调整初始资金
+
+    支持转入(deposit)和转出(withdraw)操作。
+    大额操作（>=10万）需要设置 confirm=true 确认。
+    """
+    try:
+        result = service.adjust_capital(request)
+
+        # 如果需要确认
+        if not result.get("success") and result.get("data", {}).get("require_confirmation"):
+            return APIResponse(
+                success=False,
+                data=result.get("data"),
+                message=result.get("message", "Confirmation required")
+            )
+
+        if not result.get("success"):
+            raise HTTPException(status_code=500, detail=result.get("message", "Failed to adjust capital"))
+
+        return APIResponse(
+            data=result.get("data"),
+            message=result.get("message", "Capital adjusted successfully")
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adjusting capital: {str(e)}")
+
+
+@portfolio_router.get("/portfolio/account/capital/history", response_model=APIResponse)
+async def get_capital_history(
+    limit: int = Query(20, ge=1, le=100, description="限制返回数量")
+):
+    """获取资金调整历史"""
+    try:
+        result = service.get_capital_history(limit=limit)
+
+        if not result.get("success"):
+            raise HTTPException(status_code=500, detail="Failed to get capital history")
+
+        return APIResponse(
+            data=result.get("data"),
+            message=result.get("message", "Capital history retrieved successfully")
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting capital history: {str(e)}")
 
 @portfolio_router.get("/portfolio/transactions", response_model=APIResponse)
 async def get_transactions(

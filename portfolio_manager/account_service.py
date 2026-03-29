@@ -3,7 +3,7 @@
 资金管理服务（重构版 - 使用 Repository 模式）
 """
 
-from typing import List
+from typing import List, Optional
 from decimal import Decimal
 from portfolio_manager.database import CashBalance, Transaction
 from portfolio_manager.models import AccountSummary
@@ -15,16 +15,23 @@ from common.exceptions import InsufficientFundsError, BusinessError
 class AccountService:
     """资金管理服务"""
 
-    def __init__(self, cash_repo: CashBalanceRepository, position_service: PositionService):
+    def __init__(
+        self,
+        cash_repo: CashBalanceRepository,
+        position_service: PositionService,
+        capital_service: Optional['CapitalService'] = None
+    ):
         """
         初始化资金服务
 
         Args:
             cash_repo: 现金余额仓库（依赖注入）
             position_service: 持仓服务
+            capital_service: 资金调整服务（可选，用于获取初始资金）
         """
         self.cash_repo = cash_repo
         self.position_service = position_service
+        self.capital_service = capital_service
 
     def get_account_summary(self) -> AccountSummary:
         """
@@ -34,6 +41,7 @@ class AccountService:
         - 总市值 = 股票市值 + 现金
         - 股票市值 = 所有持仓市值之和
         - 现金 = 现金余额表
+        - 初始资金 = 从 capital_adjustments 汇总
         - 总浮动盈亏 = 所有持仓浮动盈亏之和
         - 总实际盈亏 = 历史卖出交易的累计盈利
 
@@ -53,6 +61,11 @@ class AccountService:
         # 计算总市值
         total_market_value = stock_market_value + cash
 
+        # 获取初始资金
+        initial_capital = 0.0
+        if self.capital_service:
+            initial_capital = self.capital_service.get_initial_capital()
+
         # 计算实际盈亏（卖出交易的累计盈利）
         total_realized_pl = self._calculate_realized_pl()
 
@@ -60,6 +73,7 @@ class AccountService:
             total_market_value=total_market_value,
             stock_market_value=stock_market_value,
             cash=cash,
+            initial_capital=initial_capital,
             total_floating_pl=total_floating_pl,
             total_realized_pl=total_realized_pl,
             positions_count=len(positions)

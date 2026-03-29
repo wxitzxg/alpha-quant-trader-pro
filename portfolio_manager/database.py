@@ -63,8 +63,24 @@ class CashBalance(Base):
 
     id = Column(Integer, primary_key=True, default=1, comment='固定 ID 为 1')
     amount = Column(DECIMAL(15, 4), nullable=False, default=0, comment='现金余额')
+    initial_capital = Column(DECIMAL(15, 4), nullable=False, default=0, comment='初始资金')
     version = Column(Integer, nullable=False, default=0, comment='乐观锁版本号')
     updated_at = Column(TIMESTAMP, nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class CapitalAdjustment(Base):
+    """资金调整记录表"""
+    __tablename__ = 'capital_adjustments'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    amount = Column(DECIMAL(15, 4), nullable=False, comment='调整金额')
+    adjustment_type = Column(String(20), nullable=False, comment='类型: deposit/withdraw')
+    reason = Column(String(200), nullable=True, comment='调整原因')
+    created_at = Column(TIMESTAMP, nullable=False, server_default=func.now())
+
+    __table_args__ = (
+        Index('idx_capital_adjustments_created_at', created_at.desc()),
+    )
 
 
 class StockFavorite(Base):
