@@ -91,10 +91,13 @@ class CapitalAdjustment(Base):
 POST /api/portfolio/account/capital/adjust
 ```
 
-**请求 Schema：**
+**请求 Schema（`portfolio_manager/schemas/capital_schemas.py`）：**
 
 ```python
 from enum import Enum
+from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional
+from datetime import datetime
 
 class AdjustmentType(str, Enum):
     DEPOSIT = "deposit"
@@ -104,6 +107,26 @@ class CapitalAdjustRequest(BaseModel):
     amount: float = Field(..., gt=0, description="调整金额（必须大于0）")
     adjustment_type: AdjustmentType = Field(..., description="调整类型")
     reason: Optional[str] = Field(None, max_length=200, description="调整原因")
+
+class CapitalAdjustResponse(BaseModel):
+    adjustment_id: int
+    new_initial_capital: float
+    adjustment_type: AdjustmentType
+    amount: float
+    new_cash_balance: float
+
+class CapitalAdjustmentItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    amount: float
+    adjustment_type: AdjustmentType
+    reason: Optional[str]
+    created_at: datetime
+
+class CapitalAdjustmentHistory(BaseModel):
+    items: list[CapitalAdjustmentItem]
+    total: int
 ```
 
 请求体示例：
@@ -113,17 +136,6 @@ class CapitalAdjustRequest(BaseModel):
   "adjustment_type": "deposit",
   "reason": "追加投资"
 }
-```
-
-**响应 Schema：**
-
-```python
-class CapitalAdjustResponse(BaseModel):
-    adjustment_id: int
-    new_initial_capital: float
-    adjustment_type: AdjustmentType
-    amount: float
-    new_cash_balance: float
 ```
 
 响应示例：
@@ -150,19 +162,20 @@ class CapitalAdjustResponse(BaseModel):
 GET /api/portfolio/account/capital/history
 ```
 
-**响应 Schema：**
-
-```python
-class CapitalAdjustmentItem(BaseModel):
-    id: int
-    amount: float
-    adjustment_type: AdjustmentType
-    reason: Optional[str]
-    created_at: datetime
-
-class CapitalAdjustmentHistory(BaseModel):
-    items: List[CapitalAdjustmentItem]
-    total: int
+响应示例：
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "amount": 100000.00,
+      "adjustment_type": "deposit",
+      "reason": "初始资金",
+      "created_at": "2026-03-29T10:00:00"
+    }
+  ],
+  "total": 1
+}
 ```
 
 #### 获取账户汇总
@@ -171,18 +184,38 @@ class CapitalAdjustmentHistory(BaseModel):
 GET /api/portfolio/account/summary
 ```
 
-**响应 Schema：**
+**需要修改的文件：**
+- `portfolio_manager/models.py` - 内部 AccountSummary 模型
+- `api_server/models/portfolio.py` - API 响应 AccountSummary 模型
+
+**内部模型（`portfolio_manager/models.py`）：**
 
 ```python
 class AccountSummary(BaseModel):
-    cash: float                              # 当前现金
-    stock_market_value: float                # 股票市值
-    total_market_value: float                # 总市值 = 现金 + 股票市值
-    initial_capital: float                   # 初始资金
-    total_pl: float                          # 总盈亏 = 总市值 - 初始资金
-    total_floating_pl: float                 # 浮动盈亏
-    total_realized_pl: float                 # 实际盈亏
-    positions_count: int                     # 持仓数量
+    total_market_value: float = 0.0    # 总市值
+    stock_market_value: float = 0.0    # 股票市值
+    cash: float = 0.0                  # 现金
+    initial_capital: float = 0.0       # 初始资金（新增）
+    total_pl: float = 0.0              # 总盈亏（新增）
+    total_floating_pl: float = 0.0     # 浮动盈亏
+    total_realized_pl: float = 0.0     # 实际盈亏
+    positions_count: int = 0           # 持仓数量
+```
+
+**API 响应模型（`api_server/models/portfolio.py`）：**
+
+```python
+class AccountSummary(BaseModel):
+    """账户汇总"""
+    total_market_value: float = Field(..., description="总市值")
+    total_cash: float = Field(..., description="总现金")
+    stock_market_value: float = Field(0.0, description="股票市值")
+    initial_capital: float = Field(0.0, description="初始资金")  # 新增
+    total_pl: float = Field(0.0, description="总盈亏")          # 新增
+    total_profit: float = Field(..., description="总盈亏（兼容旧字段）")
+    total_profit_rate: float = Field(..., description="总盈亏率")
+    position_count: int = Field(..., description="持仓股票数")
+    today_profit: float = Field(..., description="今日盈亏")
 ```
 
 响应示例：
@@ -280,19 +313,26 @@ def rollback():
 
 #### API 权限验证
 
+> **注意：** 当前项目未实现用户认证机制。资金调整接口暂时无需认证。后续如需增加认证，可实现以下方案：
+
+**未来认证方案（可选）：**
+
 ```python
 # api_server/routers/portfolio.py
 
 @router.post("/account/capital/adjust")
 async def adjust_capital(
     request: CapitalAdjustRequest,
-    current_user: User = Depends(get_current_user)  # JWT 认证
+    # current_user: User = Depends(get_current_user)  # 未来添加认证
 ):
-    """资金调整接口 - 需要认证"""
+    """资金调整接口"""
     pass
 ```
 
-#### 操作日志
+**建议后续实现：**
+1. JWT Token 认证
+2. API Key 认证（适用于内部服务）
+3. IP 白名单限制
 
 在 `capital_adjustments` 表中已包含：
 - `created_at` - 操作时间
@@ -368,11 +408,15 @@ class TestCapitalAPI:
 | 文件 | 变更类型 | 说明 |
 |------|----------|------|
 | `portfolio_manager/database.py` | 修改 | 新增 CapitalAdjustment 模型，修改 CashBalance 模型 |
-| `portfolio_manager/models.py` | 修改 | 新增 CapitalAdjustRequest/Response 等 Schema |
+| `portfolio_manager/models.py` | 修改 | 更新 AccountSummary 模型，新增 initial_capital 和 total_pl 字段 |
+| `portfolio_manager/schemas/capital_schemas.py` | 新增 | CapitalAdjustRequest/Response 等 Schema |
+| `portfolio_manager/schemas/__init__.py` | 修改 | 导出 capital_schemas |
 | `portfolio_manager/repositories/capital_repository.py` | 新增 | CapitalAdjustmentRepository |
 | `portfolio_manager/repositories/__init__.py` | 修改 | 导出 CapitalAdjustmentRepository |
 | `portfolio_manager/capital_service.py` | 新增 | 资金调整服务 |
-| `portfolio_manager/account_service.py` | 修改 | 更新账户汇总计算逻辑 |
+| `portfolio_manager/account_service.py` | 修改 | 更新账户汇总计算逻辑（新增 initial_capital、total_pl） |
+| `api_server/models/portfolio.py` | 修改 | 更新 AccountSummary 响应模型 |
+| `api_server/services/portfolio_service.py` | 修改 | 更新 get_account_summary 返回值 |
 | `api_server/routers/portfolio.py` | 修改 | 新增资金调整接口 |
 | `scripts/migrate_capital.py` | 新增 | 数据迁移脚本 |
 | `tests/portfolio_manager/test_capital.py` | 新增 | 单元测试 |
