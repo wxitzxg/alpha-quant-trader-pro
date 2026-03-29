@@ -235,8 +235,8 @@ class TestCapitalService:
 class TestAccountSummary:
     """账户汇总测试"""
 
-    def test_total_pl_calculation(self):
-        """测试总盈亏计算"""
+    def test_total_market_value_calculation(self):
+        """测试总市值计算"""
         from portfolio_manager.models import AccountSummary
 
         summary = AccountSummary(
@@ -244,30 +244,30 @@ class TestAccountSummary:
             stock_market_value=95000.0,
             cash=10000.0,
             initial_capital=100000.0,
-            total_pl=5000.0,
             total_floating_pl=3000.0,
             total_realized_pl=2000.0,
             positions_count=3
         )
 
-        # 验证计算正确
-        assert summary.total_pl == summary.total_market_value - summary.initial_capital
+        # 验证总市值 = 股票市值 + 现金
         assert summary.total_market_value == summary.stock_market_value + summary.cash
+        # 验证初始资金独立记录
+        assert summary.initial_capital == 100000.0
 
-    def test_total_pl_with_no_initial_capital(self):
-        """测试无初始资金时总盈亏等于总市值"""
+    def test_floating_and_realized_pl(self):
+        """测试浮动盈亏和实际盈亏"""
         from portfolio_manager.models import AccountSummary
 
         summary = AccountSummary(
             total_market_value=105000.0,
             stock_market_value=95000.0,
             cash=10000.0,
-            initial_capital=0.0,
-            total_pl=105000.0,
-            total_floating_pl=3000.0,
-            total_realized_pl=2000.0,
+            initial_capital=100000.0,
+            total_floating_pl=-500.0,
+            total_realized_pl=1500.0,
             positions_count=3
         )
 
-        # 验证无初始资金时，总盈亏 = 总市值
-        assert summary.total_pl == summary.total_market_value
+        # 验证浮动盈亏和实际盈亏独立记录
+        assert summary.total_floating_pl == -500.0
+        assert summary.total_realized_pl == 1500.0

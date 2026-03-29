@@ -49,7 +49,6 @@ class AccountSummary(BaseModel):
     stock_market_value: float = 0.0    # 股票市值
     cash: float = 0.0                  # 现金
     initial_capital: float = 0.0       # 初始资金
-    total_pl: float = 0.0              # 总盈亏
     total_floating_pl: float = 0.0     # 总浮动盈亏
     total_realized_pl: float = 0.0     # 总实际盈亏
     positions_count: int = 0           # 持仓股票数量

@@ -13,9 +13,8 @@ class AccountSummary(BaseModel):
     total_assets: float = Field(..., description="总资产（= total_market_value，兼容旧字段）")
     stock_market_value: float = Field(0.0, description="股票市值")
     initial_capital: float = Field(0.0, description="初始资金")
-    total_pl: float = Field(0.0, description="总盈亏")
-    total_profit: float = Field(..., description="总盈亏（= total_pl，兼容旧字段）")
-    total_profit_rate: float = Field(..., description="总盈亏率")
+    total_floating_pl: float = Field(0.0, description="总浮动盈亏")
+    total_realized_pl: float = Field(0.0, description="总实际盈亏")
     position_count: int = Field(..., description="持仓股票数")
     today_profit: float = Field(..., description="今日盈亏")
 

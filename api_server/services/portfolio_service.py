@@ -93,7 +93,6 @@ class PortfolioService:
                         "stock_market_value": summary.stock_market_value,
                         "cash": summary.cash,
                         "initial_capital": summary.initial_capital,
-                        "total_pl": summary.total_pl,
                         "total_floating_pl": summary.total_floating_pl,
                         "total_realized_pl": summary.total_realized_pl,
                         "positions_count": summary.positions_count

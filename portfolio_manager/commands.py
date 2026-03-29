@@ -86,13 +86,16 @@ class PortfolioCommands:
         self.fee_calculator = FeeCalculator(self.config.get_fee_config())
 
         # Initialize repositories
-        from portfolio_manager.repositories import PositionRepository, TransactionRepository, CashBalanceRepository
+        from portfolio_manager.repositories import PositionRepository, TransactionRepository, CashBalanceRepository, CapitalAdjustmentRepository
         position_repo = PositionRepository(self.db)
         transaction_repo = TransactionRepository(self.db)
         cash_repo = CashBalanceRepository(self.db)
+        capital_repo = CapitalAdjustmentRepository(self.db)
 
         self.position_service = PositionService(position_repo, self.data_source)
-        self.account_service = AccountService(cash_repo, self.position_service)
+        from portfolio_manager.capital_service import CapitalService
+        self.capital_service = CapitalService(self.db, capital_repo, cash_repo)
+        self.account_service = AccountService(cash_repo, self.position_service, self.capital_service)
         self.transaction_service = TransactionService(
             transaction_repo,
             position_repo,
@@ -305,6 +308,100 @@ class PortfolioCommands:
             amount: 增加金额
         """
         self.account_service.add_cash(amount)
+
+    def deposit_capital(self, amount: float, reason: str = None, confirm: bool = False):
+        """
+        转入资金（增加初始资金和现金）
+
+        Args:
+            amount: 转入金额
+            reason: 转入原因（可选）
+            confirm: 大额确认（>= 10万需确认）
+
+        Returns:
+            dict: 包含 adjustment_id, new_initial_capital 等
+        """
+        from portfolio_manager.schemas.capital_schemas import CapitalAdjustRequest, AdjustmentType
+        request = CapitalAdjustRequest(
+            amount=amount,
+            adjustment_type=AdjustmentType.DEPOSIT,
+            reason=reason,
+            confirm=confirm
+        )
+        response, confirmation = self.capital_service.adjust_capital(request)
+        if confirmation:
+            print(f"⚠️  大额操作确认: 需要转入 ¥{amount:,.2f}")
+            print(f"   请使用 deposit_capital({amount}, reason='{reason}', confirm=True) 确认")
+            return confirmation
+        return {
+            "adjustment_id": response.adjustment_id,
+            "new_initial_capital": response.new_initial_capital,
+            "new_cash_balance": response.new_cash_balance
+        }
+
+    def withdraw_capital(self, amount: float, reason: str = None, confirm: bool = False):
+        """
+        转出资金（减少初始资金和现金）
+
+        Args:
+            amount: 转出金额
+            reason: 转出原因（可选）
+            confirm: 大额确认（>= 10万需确认）
+
+        Returns:
+            dict: 包含 adjustment_id, new_initial_capital 等
+
+        Raises:
+            InsufficientFundsError: 现金不足
+        """
+        from portfolio_manager.schemas.capital_schemas import CapitalAdjustRequest, AdjustmentType
+        request = CapitalAdjustRequest(
+            amount=amount,
+            adjustment_type=AdjustmentType.WITHDRAW,
+            reason=reason,
+            confirm=confirm
+        )
+        response, confirmation = self.capital_service.adjust_capital(request)
+        if confirmation:
+            print(f"⚠️  大额操作确认: 需要转出 ¥{amount:,.2f}")
+            print(f"   请使用 withdraw_capital({amount}, reason='{reason}', confirm=True) 确认")
+            return confirmation
+        return {
+            "adjustment_id": response.adjustment_id,
+            "new_initial_capital": response.new_initial_capital,
+            "new_cash_balance": response.new_cash_balance
+        }
+
+    def get_initial_capital(self) -> float:
+        """
+        获取当前初始资金
+
+        Returns:
+            初始资金
+        """
+        return self.capital_service.get_initial_capital()
+
+    def get_capital_history(self, limit: int = 20):
+        """
+        获取资金调整历史
+
+        Args:
+            limit: 返回记录数量
+
+        Returns:
+            资金调整历史列表
+        """
+        history = self.capital_service.get_adjustment_history(limit)
+        return [
+            {
+                "id": item.id,
+                "amount": item.amount,
+                "type": item.adjustment_type.value,
+                "reason": item.reason,
+                "created_at": item.created_at
+            }
+            for item in history.items
+        ]
 
     # ========== 手续费管理 ==========
 

@@ -97,8 +97,8 @@ class TransactionService:
             transaction.cost_basis = Decimal(str(amount))
             self.transaction_repo.add(transaction)
 
-            # 更新持仓
-            self._update_position_on_buy(symbol, quantity, price)
+            # 更新持仓（包含手续费）
+            self._update_position_on_buy(symbol, quantity, price, fee)
 
             # 扣减现金
             self.account_service.deduct_cash(total_amount)
@@ -173,16 +173,28 @@ class TransactionService:
         except Exception as e:
             raise BusinessError(f"卖出交易失败: {str(e)}", context={"symbol": symbol})
 
-    def _update_position_on_buy(self, symbol: str, quantity: int, price: float):
-        """买入后更新持仓"""
+    def _update_position_on_buy(self, symbol: str, quantity: int, price: float, fee: float):
+        """
+        买入后更新持仓
+
+        持仓成本包含手续费（分摊到每股）
+
+        Args:
+            symbol: 股票代码
+            quantity: 买入数量
+            price: 买入价格
+            fee: 买入手续费
+        """
         position = self.position_repo.get_by_symbol(symbol)
 
+        # 新买入的成本 = 金额 + 手续费（分摊到每股）
+        new_cost_value = Decimal(str(quantity)) * Decimal(str(price)) + Decimal(str(fee))
+
         if position:
-            # 已有持仓：加权平均成本
+            # 已有持仓：加权平均成本（包含历史手续费）
             old_value = Decimal(position.quantity) * position.cost_price
-            new_value = Decimal(quantity) * Decimal(str(price))
             total_quantity = position.quantity + quantity
-            total_value = old_value + new_value
+            total_value = old_value + new_cost_value
 
             position.quantity = total_quantity
             position.cost_price = total_value / total_quantity if total_quantity > 0 else Decimal('0')
@@ -191,11 +203,12 @@ class TransactionService:
             position.current_price = Decimal(str(price))
             position.calculate_metrics()
         else:
-            # 新增持仓
+            # 新增持仓：成本价 = (金额 + 手续费) / 数量
+            cost_price = new_cost_value / Decimal(str(quantity))
             position = Position(
                 symbol=symbol,
                 quantity=quantity,
-                cost_price=Decimal(str(price)),
+                cost_price=cost_price,
                 current_price=Decimal(str(price))
             )
             position.calculate_metrics()

@@ -42,7 +42,6 @@ class AccountService:
         - 股票市值 = 所有持仓市值之和
         - 现金 = 现金余额表
         - 初始资金 = 从 capital_adjustments 汇总
-        - 总盈亏 = (现金 + 股票市值) - 初始资金
         - 总浮动盈亏 = 所有持仓浮动盈亏之和
         - 总实际盈亏 = 历史卖出交易的累计盈利
 
@@ -67,9 +66,6 @@ class AccountService:
         if self.capital_service:
             initial_capital = self.capital_service.get_initial_capital()
 
-        # 计算总盈亏
-        total_pl = total_market_value - initial_capital
-
         # 计算实际盈亏（卖出交易的累计盈利）
         total_realized_pl = self._calculate_realized_pl()
 
@@ -78,7 +74,6 @@ class AccountService:
             stock_market_value=stock_market_value,
             cash=cash,
             initial_capital=initial_capital,
-            total_pl=total_pl,
             total_floating_pl=total_floating_pl,
             total_realized_pl=total_realized_pl,
             positions_count=len(positions)
