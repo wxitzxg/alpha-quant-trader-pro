@@ -2,16 +2,23 @@
 市场情绪 API 路由
 """
 
+import os
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from common.database import DatabaseManager
 from technical_analysis.services import MarketSentimentService
 
+# Database URL from environment
+DATABASE_URL = os.environ.get(
+    "DATABASE__URL",
+    "postgresql://alpha_quant_trader_pro:alpha_quant_trader_pro@alpha-quant-db:5432/alpha_quant_trader_pro"
+)
+
 
 def get_db_session() -> Session:
     """获取数据库 session 依赖"""
-    db_manager = DatabaseManager()
+    db_manager = DatabaseManager(DATABASE_URL)
     with db_manager.get_session() as session:
         yield session
 

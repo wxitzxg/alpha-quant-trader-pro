@@ -12,6 +12,7 @@ Short-Term Stock Selector - 短线选股引擎
 """
 
 from typing import Dict, Any, Optional, List
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
@@ -25,6 +26,7 @@ from stock_recommendation.strategies.strategy_config import (
     RatingThresholds,
 )
 from technical_analysis.indicators.base_indicators import BaseIndicators
+from data_sources.aggregator import DataSourceAggregator
 
 
 class ShortTermSelector(BaseSelector):
@@ -53,6 +55,14 @@ class ShortTermSelector(BaseSelector):
         self.config = config or DEFAULT_SHORT_TERM_CONFIG
         self.weights = self.config.weights
         self.thresholds = self.config.thresholds
+        self._data_aggregator = None
+
+    @property
+    def data_aggregator(self) -> DataSourceAggregator:
+        """延迟初始化数据聚合器"""
+        if self._data_aggregator is None:
+            self._data_aggregator = DataSourceAggregator()
+        return self._data_aggregator
 
     def analyze_single_stock(
         self,
@@ -89,6 +99,10 @@ class ShortTermSelector(BaseSelector):
         # 验证股票代码
         if not self._validate_stock_code(code):
             return self._create_error_result(code, "无效的股票代码")
+
+        # 如果没有传入 K 线数据，自动获取
+        if kline_data is None:
+            kline_data = self._get_kline_data(code)
 
         # 验证K线数据
         if kline_data is None or len(kline_data) < 50:
@@ -694,3 +708,38 @@ class ShortTermSelector(BaseSelector):
             r for r in results
             if r.get("recommendation", False)
         ]
+
+    def _get_kline_data(self, code: str, days: int = 100) -> Optional[pd.DataFrame]:
+        """
+        获取K线数据
+
+        Args:
+            code: 股票代码
+            days: 获取天数
+
+        Returns:
+            K线数据 DataFrame
+        """
+        try:
+            end_date = datetime.now().strftime("%Y-%m-%d")
+            start_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+            klines = self.data_aggregator.get_kline(code, "1d", start_date, end_date)
+
+            if not klines:
+                return None
+
+            data = []
+            for k in klines:
+                data.append({
+                    "open": k.open_price,
+                    "high": k.high,  # 修正字段名
+                    "low": k.low,    # 修正字段名
+                    "close": k.close,
+                    "volume": k.volume,
+                    "date": k.datetime
+                })
+
+            return pd.DataFrame(data)
+        except Exception as e:
+            # 如果获取失败，返回 None
+            return None

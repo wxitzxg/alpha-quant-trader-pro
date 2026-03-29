@@ -92,11 +92,17 @@ class BaseSelector(ABC):
         if obj is None:
             return None
 
-        # 处理 NaN 和 NaT
+        # 处理 NaN 和 NaT - 注意：pd.isna 对数组会返回数组，需要特殊处理
         if isinstance(obj, float) and np.isnan(obj):
             return None
-        if pd.isna(obj):
-            return None
+
+        # 只对标量值调用 pd.isna，避免数组问题
+        if not isinstance(obj, (np.ndarray, pd.Series, list, tuple, dict)):
+            try:
+                if pd.isna(obj):
+                    return None
+            except (ValueError, TypeError):
+                pass  # 如果 pd.isna 失败，继续处理
 
         # 处理 numpy 数值类型
         if isinstance(obj, np.integer):
