@@ -160,7 +160,7 @@ class PortfolioService:
             持仓列表
         """
         try:
-            with self._get_services() as (_, position_service, _, _, _):
+            with self._get_services() as (_, position_service, _, _, _, _):
                 positions = position_service.get_all_positions()
 
                 # 分页
@@ -217,7 +217,7 @@ class PortfolioService:
             持仓信息
         """
         try:
-            with self._get_services() as (_, position_service, _, _, _):
+            with self._get_services() as (_, position_service, _, _, _, _):
                 position = position_service.add_position(
                     symbol=symbol,
                     quantity=quantity,
@@ -266,7 +266,7 @@ class PortfolioService:
             持仓信息
         """
         try:
-            with self._get_services() as (_, position_service, _, _, _):
+            with self._get_services() as (_, position_service, _, _, _, _):
                 position = position_service.update_position(
                     symbol=symbol,
                     quantity=quantity,
@@ -319,7 +319,7 @@ class PortfolioService:
             }
         """
         try:
-            with self._get_services() as (_, position_service, _, _, _):
+            with self._get_services() as (_, position_service, _, _, _, _):
                 position = position_service.sync_position(
                     symbol=symbol,
                     quantity=quantity,

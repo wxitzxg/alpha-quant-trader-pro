@@ -71,10 +71,36 @@ class SinaAdapter(DataSourceAdapter):
 
     # priority 属性继承自基类，无需重写
 
+    def _is_index(self, symbol: str) -> bool:
+        """
+        判断是否为指数代码
+
+        Args:
+            symbol: 股票代码
+
+        Returns:
+            True 表示是指数代码
+        """
+        symbol = symbol.upper()
+        # 移除可能的前缀
+        if symbol.startswith('SH'):
+            symbol = symbol[2:]
+        elif symbol.startswith('SZ'):
+            symbol = symbol[2:]
+
+        # 000xxx 和 399xxx 系列通常是指数
+        # 000001: 上证指数, 399001: 深证成指等
+        return symbol.startswith('000') or symbol.startswith('399')
+
     def get_realtime(self, symbol: str) -> Optional[Quote]:
-        """获取实时行情"""
+        """获取实时行情（支持股票和指数）"""
         try:
-            sina_symbol = self._format_symbol(symbol)
+            # 判断是否是指数
+            if self._is_index(symbol):
+                sina_symbol = self._format_index_symbol(symbol)
+            else:
+                sina_symbol = self._format_symbol(symbol)
+
             url = f"{self.base_url}{sina_symbol}"
 
             # 必须添加 Referer 头才能访问
@@ -161,11 +187,21 @@ class SinaAdapter(DataSourceAdapter):
             raise DataSourceError("sina", f"Failed to get realtime: {e}", e)
 
     def batch_get_realtime(self, symbols: List[str]) -> List[Quote]:
-        """批量获取实时行情"""
+        """批量获取实时行情（支持股票和指数）"""
         quotes = []
 
         try:
-            sina_symbols = [self._format_symbol(s) for s in symbols]
+            # 建立原始代码到新浪代码的映射
+            sina_to_original = {}
+            sina_symbols = []
+            for s in symbols:
+                if self._is_index(s):
+                    sina_fmt = self._format_index_symbol(s)
+                else:
+                    sina_fmt = self._format_symbol(s)
+                sina_symbols.append(sina_fmt)
+                sina_to_original[sina_fmt] = s  # 记录映射关系
+
             url = f"{self.base_url}{','.join(sina_symbols)}"
 
             # 必须添加 Referer 头才能访问
@@ -186,9 +222,10 @@ class SinaAdapter(DataSourceAdapter):
                 if len(parts) < 2:
                     continue
 
-                # 提取股票代码
+                # 提取股票代码（sina格式）
                 symbol_part = parts[0].replace('var hq_str_', '')
-                symbol = self._parse_symbol(symbol_part)
+                # 使用映射表恢复原始代码格式
+                symbol = sina_to_original.get(symbol_part, self._parse_symbol(symbol_part))
 
                 values = parts[1].strip('"').split(',')
                 if len(values) < 9:
@@ -455,6 +492,50 @@ class SinaAdapter(DataSourceAdapter):
             return f"sh{symbol}"
         else:
             return f"sz{symbol}"
+
+    def _format_index_symbol(self, symbol: str) -> str:
+        """
+        格式化指数代码为新浪格式
+
+        新浪指数格式: sh000001 (上证指数), sz399001 (深证成指), sh000688 (科创50)
+
+        Args:
+            symbol: 标准指数代码 (如 "SH000001", "000001", "399001")
+
+        Returns:
+            新浪指数格式代码 (如 "sh000001", "sz399001")
+
+        Examples:
+            >>> adapter._format_index_symbol("SH000001")
+            'sh000001'
+            >>> adapter._format_index_symbol("SZ399001")
+            'sz399001'
+            >>> adapter._format_index_symbol("000001")
+            'sh000001'
+            >>> adapter._format_index_symbol("399001")
+            'sz399001'
+            >>> adapter._format_index_symbol("SH000688")
+            'sh000688'
+        """
+        # 统一转为大写处理
+        symbol = symbol.upper()
+
+        # 移除可能的前缀SH/SZ
+        if symbol.startswith('SH'):
+            symbol = symbol[2:]
+        elif symbol.startswith('SZ'):
+            symbol = symbol[2:]
+
+        # 判断是沪市还是深市指数
+        # 000xxx 系列: 000001-000999 为沪市指数（上证系列）
+        # 399xxx 系列: 399001-399999 为深市指数（深证系列）
+        if symbol.startswith('000'):
+            return f"sh{symbol}"  # 沪市指数
+        elif symbol.startswith('399'):
+            return f"sz{symbol}"  # 深市指数
+        else:
+            # 默认当作沪市指数
+            return f"sh{symbol}"
 
     def _parse_symbol(self, sina_code: str) -> str:
         """
